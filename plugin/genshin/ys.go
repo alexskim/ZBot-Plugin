@@ -222,7 +222,7 @@ func randnums(nums int, store storage) (rgba *image.RGBA, str string, replyMode 
 		fourlen                 = len(filetree["four"])
 		four2len                = len(filetree["four2"])
 
-		threeReword, fourReword, fiveReword = -1000, 1500, 6000
+		threeReword, fourReword, fiveReword = -200, 500, 6000
 		luckyMode                           = 0
 	)
 
