@@ -19,9 +19,6 @@ func init() { // 插件主体
 		Help:             "",
 	})
 
-	poolAccount := int64(10000)
-	bankAccount := zero.BotConfig.SuperUsers[0]
-
 	//engine.OnRegex(`\[CQ:reply,id=(\-?[0-9]+)\].*撤回.*`).SetBlock(true).
 	//	Handle(func(ctx *zero.Ctx) {
 	//		//[CQ:reply,id=543569241]撤回
@@ -74,7 +71,7 @@ func init() { // 插件主体
 
 	engine.OnFullMatch("查银行").SetBlock(true).
 		Handle(func(ctx *zero.Ctx) {
-			money := wallet.GetWalletOf(bankAccount)
+			money := wallet.GetWalletOf(zero.BotConfig.SuperUsers[1])
 			ctx.Send(message.ReplyWithMessage(ctx.Event.MessageID, message.Text("银行有", money, "块糖果!")))
 		})
 
@@ -93,13 +90,13 @@ func init() { // 插件主体
 				ctx.Send(message.ReplyWithMessage(ctx.Event.MessageID, message.Text("出现了错误!")))
 				return
 			}
-			err = wallet.InsertWalletOf(bankAccount, donatMoney)
+			err = wallet.InsertWalletOf(zero.BotConfig.SuperUsers[1], donatMoney)
 			if err != nil {
 				fmt.Println(err)
 				ctx.Send(message.ReplyWithMessage(ctx.Event.MessageID, message.Text("出现了错误!")))
 				return
 			}
-			pool := wallet.GetWalletOf(bankAccount)
+			pool := wallet.GetWalletOf(zero.BotConfig.SuperUsers[1])
 			ctx.Send(message.ReplyWithMessage(ctx.Event.MessageID, message.Text("你捐了", donatMoney, "个糖果给银行!\n银行现在有", pool, "个糖果!")))
 		})
 
@@ -111,7 +108,7 @@ func init() { // 插件主体
 				ctx.Send(message.ReplyWithMessage(ctx.Event.MessageID, message.Text("你不需要恰低保!")))
 				return
 			}
-			bankMoney := wallet.GetWalletOf(bankAccount)
+			bankMoney := wallet.GetWalletOf(zero.BotConfig.SuperUsers[1])
 			userMoney := wallet.GetWalletOf(uid)
 			if bankMoney < 50 {
 				ctx.Send(message.ReplyWithMessage(ctx.Event.MessageID, message.Text("银行破产了!")))
@@ -148,20 +145,20 @@ func init() { // 插件主体
 				ctx.Send(message.ReplyWithMessage(ctx.Event.MessageID, message.Text("出现了错误!")))
 				return
 			}
-			err = wallet.InsertWalletOf(poolAccount, luckyMoney)
+			err = wallet.InsertWalletOf(zero.BotConfig.SuperUsers[2], luckyMoney)
 			if err != nil {
 				fmt.Println(err)
 				ctx.Send(message.ReplyWithMessage(ctx.Event.MessageID, message.Text("出现了错误!")))
 				return
 			}
-			pool := wallet.GetWalletOf(poolAccount)
+			pool := wallet.GetWalletOf(zero.BotConfig.SuperUsers[2])
 			ctx.Send(message.ReplyWithMessage(ctx.Event.MessageID, message.Text("发糖果咯!\n糖果堆有", pool, "个糖果!\n发送 摸糖果堆 来摸糖果!")))
 		})
 
 	engine.OnFullMatch("摸糖果堆").SetBlock(true).
 		Handle(func(ctx *zero.Ctx) {
 			uid := ctx.Event.UserID
-			pool := wallet.GetWalletOf(poolAccount)
+			pool := wallet.GetWalletOf(zero.BotConfig.SuperUsers[2])
 			if pool <= 0 {
 				ctx.Send(message.ReplyWithMessage(ctx.Event.MessageID, message.Text("糖果堆没糖了!")))
 				return
@@ -180,7 +177,7 @@ func init() { // 插件主体
 			if num > pool {
 				num = pool
 			}
-			err := wallet.InsertWalletOf(poolAccount, -num)
+			err := wallet.InsertWalletOf(zero.BotConfig.SuperUsers[2], -num)
 			if err != nil {
 				fmt.Println(err)
 				ctx.Send(message.ReplyWithMessage(ctx.Event.MessageID, message.Text("出现了错误!")))

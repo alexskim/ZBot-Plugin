@@ -39,8 +39,6 @@ func init() { // 插件主体
 		},
 	})
 
-	nickname := zero.BotConfig.NickName[0]
-
 	engine.OnFullMatchGroup([]string{"寄", "寄了"}, isAtriSleeping).SetBlock(true).
 		Handle(func(ctx *zero.Ctx) {
 			process.SleepAbout1sTo2s()
@@ -56,6 +54,7 @@ func init() { // 插件主体
 	engine.OnFullMatch("萝卜子", isAtriSleeping).SetBlock(true).
 		Handle(func(ctx *zero.Ctx) {
 			process.SleepAbout1sTo2s()
+			var nickname = zero.BotConfig.NickName[0]
 			switch rand.Intn(2) {
 			case 0:
 				ctx.SendChain(randText("萝卜子是对机器人的蔑称！", "是"+nickname+"......萝卜子可是对机器人的蔑称"))
@@ -118,6 +117,7 @@ func init() { // 插件主体
 			now := time.Now().Hour()
 			if now > 11 && now < 15 { // 中午
 				process.SleepAbout1sTo2s()
+				var nickname = zero.BotConfig.NickName[0]
 				ctx.SendChain(message.Reply(ctx.Event.MessageID), randText(
 					"午安w",
 					"午觉要好好睡哦，"+nickname+"会陪伴在你身旁的w",
@@ -130,6 +130,7 @@ func init() { // 插件主体
 		Handle(func(ctx *zero.Ctx) {
 			now := time.Now().Hour()
 			process.SleepAbout1sTo2s()
+			var nickname = zero.BotConfig.NickName[0]
 			switch {
 			case now < 6: // 凌晨
 				ctx.SendChain(message.Reply(ctx.Event.MessageID), randText(
