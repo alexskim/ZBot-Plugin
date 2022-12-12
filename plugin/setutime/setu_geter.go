@@ -67,12 +67,14 @@ func init() { // 插件主体
 		_, _ = engine.GetLazyData("SetuTime.db", false)
 		err := pool.db.Open(time.Hour * 24)
 		if err != nil {
-			ctx.SendChain(message.Text("ERROR: ", err))
+			fmt.Println("ERROR: ", err)
+			ctx.SendChain(message.Text("ERROR: db.Open"))
 			return false
 		}
 		for _, imgtype := range pool.List() {
 			if err := pool.db.Create(imgtype, &pixiv.Illust{}); err != nil {
-				ctx.SendChain(message.Text("ERROR: ", err))
+				fmt.Println("ERROR: ", err)
+				ctx.SendChain(message.Text("ERROR: db.Create"))
 				return false
 			}
 		}
@@ -108,7 +110,8 @@ func init() { // 插件主体
 			)
 			err := pool.add(ctx, imgtype, id)
 			if err != nil {
-				ctx.SendChain(message.Text("ERROR: ", err))
+				fmt.Println("ERROR: ", err)
+				ctx.SendChain(message.Text("ERROR: pool add"))
 				return
 			}
 			ctx.SendChain(message.Text("成功向分类", imgtype, "添加图片", id))
@@ -122,7 +125,8 @@ func init() { // 插件主体
 			)
 			// 查询数据库
 			if err := pool.remove(imgtype, id); err != nil {
-				ctx.SendChain(message.Text("ERROR: ", err))
+				fmt.Println("ERROR: ", err)
+				ctx.SendChain(message.Text("ERROR: pool remove"))
 				return
 			}
 			ctx.SendChain(message.Text("删除成功"))
@@ -163,7 +167,8 @@ func (p *imgpool) push(ctx *zero.Ctx, imgtype string, illust *pixiv.Illust) {
 		if fileutil.IsNotExist(f) {
 			// 下载图片
 			if err := illust.DownloadToCache(0); err != nil {
-				ctx.SendChain(message.Text("ERROR: ", err))
+				fmt.Println("ERROR: ", err)
+				ctx.SendChain(message.Text("ERROR: push"))
 				return
 			}
 		}
@@ -201,7 +206,8 @@ func (p *imgpool) fill(ctx *zero.Ctx, imgtype string) {
 		illust := &pixiv.Illust{}
 		// 查询出一张图片
 		if err := p.db.Pick(imgtype, illust); err != nil {
-			ctx.SendChain(message.Text("ERROR: ", err))
+			fmt.Println("ERROR: ", err)
+			ctx.SendChain(message.Text("ERROR: fill"))
 			continue
 		}
 		// 向缓冲池添加一张图片

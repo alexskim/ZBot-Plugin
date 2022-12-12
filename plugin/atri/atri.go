@@ -38,12 +38,27 @@ func init() { // 插件主体
 			ctx.SendChain(message.Text("Zzz……Zzz……"))
 		},
 	})
+
+	nickname := zero.BotConfig.NickName[0]
+
+	engine.OnFullMatchGroup([]string{"寄", "寄了"}, isAtriSleeping).SetBlock(true).
+		Handle(func(ctx *zero.Ctx) {
+			process.SleepAbout1sTo2s()
+			ctx.SendChain(randText(
+				"寄",
+				"你寄了",
+				"你寄了!",
+				"谁寄了?",
+				"寄！",
+				"寄了",
+			))
+		})
 	engine.OnFullMatch("萝卜子", isAtriSleeping).SetBlock(true).
 		Handle(func(ctx *zero.Ctx) {
 			process.SleepAbout1sTo2s()
 			switch rand.Intn(2) {
 			case 0:
-				ctx.SendChain(randText("萝卜子是对机器人的蔑称！", "是亚托莉......萝卜子可是对机器人的蔑称"))
+				ctx.SendChain(randText("萝卜子是对机器人的蔑称！", "是"+nickname+"......萝卜子可是对机器人的蔑称"))
 			case 1:
 				ctx.SendChain(randRecord("RocketPunch.amr"))
 			}
@@ -105,7 +120,7 @@ func init() { // 插件主体
 				process.SleepAbout1sTo2s()
 				ctx.SendChain(message.Reply(ctx.Event.MessageID), randText(
 					"午安w",
-					"午觉要好好睡哦，ATRI会陪伴在你身旁的w",
+					"午觉要好好睡哦，"+nickname+"会陪伴在你身旁的w",
 					"嗯哼哼~睡吧，就像平常一样安眠吧~o(≧▽≦)o",
 					"睡你午觉去！哼唧！！",
 				))
@@ -135,7 +150,7 @@ func init() { // 插件主体
 			case now >= 11 && now < 15:
 				ctx.SendChain(message.Reply(ctx.Event.MessageID), randText(
 					"午安w",
-					"午觉要好好睡哦，ATRI会陪伴在你身旁的w",
+					"午觉要好好睡哦，"+nickname+"会陪伴在你身旁的w",
 					"嗯哼哼~睡吧，就像平常一样安眠吧~o(≧▽≦)o",
 					"睡你午觉去！哼唧！！",
 				))

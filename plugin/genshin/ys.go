@@ -3,6 +3,8 @@ package genshin
 
 import (
 	"archive/zip"
+	"fmt"
+	"github.com/FloatTech/AnimeAPI/wallet"
 	"image"
 	"image/color"
 	"image/draw"
@@ -10,6 +12,7 @@ import (
 	"image/png"
 	"math/rand"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync/atomic"
 
@@ -32,17 +35,19 @@ var (
 	filetree               = make(zipfilestructure, 32)
 	starN3, starN4, starN5 *zip.File
 	namereg                = regexp.MustCompile(`_(.*)\.png`)
+	min                    = 10
+	max                    = 1000
 )
 
 func init() {
 	engine := control.Register("genshin", &ctrl.Options[*zero.Ctx]{
 		DisableOnDefault: false,
-		Brief:            "原神模拟抽卡",
-		Help:             "- 原神十连\n- 切换原神卡池",
+		Brief:            "模拟抽卡",
+		Help:             "- 十连\n- 切换卡池\n- 十连<数字>",
 		PublicDataFolder: "Genshin",
 	}).ApplySingle(ctxext.DefaultSingle)
 
-	engine.OnFullMatch("切换原神卡池").SetBlock(true).Limit(ctxext.LimitByUser).
+	engine.OnFullMatch("切换卡池").SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(func(ctx *zero.Ctx) {
 			c, ok := ctx.State["manager"].(*ctrl.Control[*zero.Ctx])
 			if !ok {
@@ -68,7 +73,7 @@ func init() {
 			}
 		})
 
-	engine.OnFullMatch("原神十连", fcext.DoOnceOnSuccess(
+	engine.OnFullMatch("十连", fcext.DoOnceOnSuccess(
 		func(ctx *zero.Ctx) bool {
 			zipfile := engine.DataFolder() + "Genshin.zip"
 			_, err := engine.GetLazyData("Genshin.zip", false)
@@ -95,7 +100,7 @@ func init() {
 				gid = -ctx.Event.UserID
 			}
 			store := (storage)(c.GetData(gid))
-			img, str, mode, err := randnums(10, store)
+			img, str, mode, _, err := randnums(10, store)
 			if err != nil {
 				ctx.SendChain(message.Text("ERROR: ", err))
 				return
@@ -110,9 +115,97 @@ func init() {
 			}
 			cl()
 		})
+
+	engine.OnRegex(`^十连\s*(\d+)`, fcext.DoOnceOnSuccess(
+		func(ctx *zero.Ctx) bool {
+			zipfile := engine.DataFolder() + "Genshin.zip"
+			_, err := engine.GetLazyData("Genshin.zip", false)
+			if err != nil {
+				ctx.SendChain(message.Text("ERROR: ", err))
+				return false
+			}
+			err = parsezip(zipfile)
+			if err != nil {
+				ctx.SendChain(message.Text("ERROR: ", err))
+				return false
+			}
+			return true
+		},
+	)).SetBlock(true).Limit(ctxext.LimitByUser).
+		Handle(func(ctx *zero.Ctx) {
+			c, ok := ctx.State["manager"].(*ctrl.Control[*zero.Ctx])
+			if !ok {
+				ctx.SendChain(message.Text("找不到服务!"))
+				return
+			}
+			invest, err := strconv.Atoi(ctx.State["regex_matched"].([]string)[1])
+			if err != nil {
+				ctx.SendChain(message.Text("ERROR: ", err))
+				return
+			}
+			uid := ctx.Event.UserID
+			money := wallet.GetWalletOf(uid)
+			if invest < min {
+				ctx.Send(message.ReplyWithMessage(ctx.Event.MessageID, message.Text("单次最低投入", min, "个糖果哦~")))
+				invest = min
+			}
+			if invest > max {
+				ctx.Send(message.ReplyWithMessage(ctx.Event.MessageID, message.Text("单次最高投入", max, "个糖果哦~")))
+				invest = max
+			}
+			if money < invest {
+				ctx.Send(message.ReplyWithMessage(ctx.Event.MessageID, message.Text("啊这,你的糖果不够~")))
+				return
+			}
+			gid := ctx.Event.GroupID
+			if gid == 0 {
+				gid = -ctx.Event.UserID
+			}
+			store := (storage)(c.GetData(gid))
+			img, str, mode, reword, err := randnums(10, store)
+			if err != nil {
+				ctx.SendChain(message.Text("ERROR: ", err))
+				return
+			}
+			b, cl := writer.ToBytes(img)
+			rst := ""
+			if !store.is5starsmode() {
+				realReword := reword * invest / 1000
+				insert := realReword - invest
+				_ = wallet.InsertWalletOf(zero.BotConfig.SuperUsers[0], invest)
+				_ = wallet.InsertWalletOf(zero.BotConfig.SuperUsers[0], -realReword)
+				err := wallet.InsertWalletOf(ctx.Event.UserID, insert)
+				fmt.Println("[ys] 投入糖果", invest)
+				fmt.Println("[ys] 产出数值", reword, "‰")
+				fmt.Println("[ys] 产出糖果", realReword)
+				fmt.Println("[ys] 真实收获", insert)
+				if err != nil {
+					fmt.Println("[ys] 钱包坏掉力", err)
+					ctx.SendChain(message.Text("[ys] 钱包坏掉力"))
+					return
+				}
+				if realReword < 0 {
+					rst = fmt.Sprintf("你投入了%d块糖果,并被扣除了%d块糖果~", invest, -realReword)
+				} else if realReword == 0 {
+					rst = fmt.Sprintf("你投入了%d块糖果,然后无事发生~", invest)
+				} else {
+					rst = fmt.Sprintf("你投入了%d块糖果,并收获了%d块糖果~", invest, realReword)
+				}
+			} else {
+				rst = "当前是五星模式!"
+			}
+			if mode {
+				ctx.Send(message.ReplyWithMessage(ctx.Event.MessageID,
+					message.Text("恭喜你抽到了: \n", str), message.ImageBytes(b), message.Text("\n", rst)))
+			} else {
+				ctx.Send(message.ReplyWithMessage(ctx.Event.MessageID, message.Text("十连成功~"), message.ImageBytes(b), message.Text("\n", rst)))
+			}
+
+			cl()
+		})
 }
 
-func randnums(nums int, store storage) (rgba *image.RGBA, str string, replyMode bool, err error) {
+func randnums(nums int, store storage) (rgba *image.RGBA, str string, replyMode bool, reword int, err error) {
 	var (
 		fours, fives                  = make([]*zip.File, 0, 10), make([]*zip.File, 0, 10)                           // 抽到 四, 五星角色
 		threeArms, fourArms, fiveArms = make([]*zip.File, 0, 10), make([]*zip.File, 0, 10), make([]*zip.File, 0, 10) // 抽到 三 , 四, 五星武器
@@ -128,9 +221,14 @@ func randnums(nums int, store storage) (rgba *image.RGBA, str string, replyMode 
 		threelen                = len(filetree["Three"])
 		fourlen                 = len(filetree["four"])
 		four2len                = len(filetree["four2"])
+
+		threeReword, fourReword, fiveReword = -1000, 1500, 6000
+		luckyMode                           = 0
 	)
 
 	if totl%9 == 0 { // 累计9次加入一个五星
+		fmt.Println("[ys] 保底5x +", fiveReword, ",now ", reword)
+		reword += fiveReword
 		switch rand.Intn(2) {
 		case 0:
 			fiveN++
@@ -154,27 +252,75 @@ func randnums(nums int, store storage) (rgba *image.RGBA, str string, replyMode 
 			}
 		}
 	} else { // 默认模式
-		for i := 0; i < nums; i++ {
-			a := rand.Intn(1000) // 抽卡几率 三星80% 四星17% 五星3%
-			switch {
-			case a >= 0 && a <= 800:
-				threeN2++
-				threeArms = append(threeArms, filetree["Three"][rand.Intn(threelen)])
-			case a > 800 && a <= 885:
-				fourN++
-				fours = append(fours, filetree["four"][rand.Intn(fourlen)]) // 随机角色
-			case a > 885 && a <= 970:
-				fourN2++
-				fourArms = append(fourArms, filetree["four2"][rand.Intn(four2len)]) // 随机武器
-			case a > 970 && a <= 985:
-				fiveN++
-				fives = append(fives, filetree["five"][rand.Intn(fivelen)])
-			default:
-				fiveN2++
-				fiveArms = append(fiveArms, filetree["five2"][rand.Intn(five2len)])
+		lucky := rand.Intn(100000)
+		switch {
+		case lucky >= 0 && lucky <= 99900:
+			for i := 0; i < nums; i++ {
+				a := rand.Intn(1000) // 抽卡几率 三星80% 四星17% 五星3%
+				switch {
+				case a >= 0 && a <= 800:
+					threeN2++
+					reword += threeReword
+					fmt.Println("[ys] 3x +", threeReword, ",now ", reword)
+					threeArms = append(threeArms, filetree["Three"][rand.Intn(threelen)])
+				case a > 800 && a <= 885:
+					fourN++
+					reword += fourReword
+					fmt.Println("[ys] 4x +", fourReword, ",now ", reword)
+					fours = append(fours, filetree["four"][rand.Intn(fourlen)]) // 随机角色
+				case a > 885 && a <= 970:
+					fourN2++
+					reword += fourReword
+					fmt.Println("[ys] 4x +", fourReword, ",now ", reword)
+					fourArms = append(fourArms, filetree["four2"][rand.Intn(four2len)]) // 随机武器
+				case a > 970 && a <= 985:
+					fiveN++
+					reword += fiveReword
+					fmt.Println("[ys] 5x +", fiveReword, ",now ", reword)
+					fives = append(fives, filetree["five"][rand.Intn(fivelen)])
+				default:
+					fiveN2++
+					reword += fiveReword
+					fmt.Println("[ys] 5x +", fiveReword, ",now ", reword)
+					fiveArms = append(fiveArms, filetree["five2"][rand.Intn(five2len)])
+				}
+			}
+		case lucky >= 99901 && lucky <= 99990:
+			luckyMode = 1
+			fmt.Println("[ys] 幸运模式")
+			for i := 0; i < nums; i++ {
+				switch rand.Intn(2) {
+				case 0:
+					fiveN++
+					reword += fiveReword
+					fives = append(fives, filetree["five"][rand.Intn(fivelen)])
+				case 1:
+					fiveN2++
+					reword += fiveReword
+					fiveArms = append(fiveArms, filetree["five2"][rand.Intn(five2len)])
+				}
+			}
+		default:
+			luckyMode = 2
+			fmt.Println("[ys] 超级幸运模式")
+			for i := 0; i < nums; i++ {
+				switch rand.Intn(2) {
+				case 0:
+					fiveN++
+					reword += fiveReword * 10
+					fives = append(fives, filetree["five"][rand.Intn(fivelen)])
+				case 1:
+					fiveN2++
+					reword += fiveReword * 10
+					fiveArms = append(fiveArms, filetree["five2"][rand.Intn(five2len)])
+				}
 			}
 		}
+
 		if fourN+fourN2 == 0 && threeN2 > 0 { // 没有四星时自动加入
+			reword -= threeReword
+			reword += fourReword
+			fmt.Println("[ys] 保底4x -", threeReword, " ,+", fourReword, ",now ", reword)
 			threeN2--
 			threeArms = threeArms[:len(threeArms)-1]
 			switch rand.Intn(2) {
@@ -237,6 +383,12 @@ func randnums(nums int, store storage) (rgba *image.RGBA, str string, replyMode 
 	if threeN2 > 0 {
 		he(threeN2, 1, starN3, threebg) // 三星武器
 	}
+	if luckyMode == 1 {
+		str += "\n你触发了幸运模式,全五星激活!"
+	}
+	if luckyMode == 2 {
+		str += "\n你触发了超级幸运模式,超高收益全五星激活!"
+	}
 
 	var c1, c2, c3 uint8 = 50, 50, 50 // 背景颜色
 
@@ -270,7 +422,7 @@ func randnums(nums int, store storage) (rgba *image.RGBA, str string, replyMode 
 
 		imgs, err := bgs[i].Open() // 取出背景图片
 		if err != nil {
-			return nil, "", false, err
+			return nil, "", false, reword, err
 		}
 		defer imgs.Close()
 
@@ -280,7 +432,7 @@ func randnums(nums int, store storage) (rgba *image.RGBA, str string, replyMode 
 
 		imgs1, err := hero[i].Open() // 取出图片名
 		if err != nil {
-			return nil, "", false, err
+			return nil, "", false, reword, err
 		}
 		defer imgs1.Close()
 
@@ -290,7 +442,7 @@ func randnums(nums int, store storage) (rgba *image.RGBA, str string, replyMode 
 
 		imgs2, err := stars[i].Open() // 取出星级图标
 		if err != nil {
-			return nil, "", false, err
+			return nil, "", false, reword, err
 		}
 		defer imgs2.Close()
 
@@ -300,7 +452,7 @@ func randnums(nums int, store storage) (rgba *image.RGBA, str string, replyMode 
 
 		imgs3, err := cicon[i].Open() // 取出类型图标
 		if err != nil {
-			return nil, "", false, err
+			return nil, "", false, reword, err
 		}
 		defer imgs3.Close()
 
@@ -310,12 +462,12 @@ func randnums(nums int, store storage) (rgba *image.RGBA, str string, replyMode 
 	}
 	imgs4, err := filetree["Reply.png"][0].Open() // "分享" 图标
 	if err != nil {
-		return nil, "", false, err
+		return nil, "", false, reword, err
 	}
 	defer imgs4.Close()
 	img4, err := png.Decode(imgs4)
 	if err != nil {
-		return nil, "", false, err
+		return nil, "", false, reword, err
 	}
 	offset4 := image.Pt(1270, 945) // 宽, 高
 	draw.Draw(rgba, img4.Bounds().Add(offset4), img4, image.Point{}, draw.Over)

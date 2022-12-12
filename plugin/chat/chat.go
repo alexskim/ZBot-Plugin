@@ -45,11 +45,30 @@ func init() { // 插件主体
 			case poke.Load(ctx.Event.GroupID).AcquireN(3):
 				// 5分钟共8块命令牌 一次消耗3块命令牌
 				time.Sleep(time.Second * 1)
-				ctx.SendChain(message.Text("请不要戳", nickname, " >_<"))
+				// novelai 群偷的语料
+				ctx.SendChain(randText(
+					"请不要戳"+nickname+" >_<",
+					"呜...不要用力戳"+nickname+"...好疼>_<",
+					"呜喵！......不许戳 (,,• ₃ •,,)",
+					"放手啦，不给戳QAQ",
+					"戳"+nickname+"干嘛qwq",
+					"别戳了别戳了再戳就坏了555",
+					"呜......戳坏了",
+				))
 			case poke.Load(ctx.Event.GroupID).Acquire():
 				// 5分钟共8块命令牌 一次消耗1块命令牌
 				time.Sleep(time.Second * 1)
-				ctx.SendChain(message.Text("喂(#`O′) 戳", nickname, "干嘛！"))
+				ctx.SendChain(message.Poke(ctx.Event.UserID))
+				time.Sleep(time.Second * 1)
+				// novelai 群偷的语料
+				ctx.SendChain(randText(
+					"喂(#`O′) 戳"+nickname+"干嘛！",
+					"你再戳！",
+					"戳坏了，你赔！",
+					"唔姆姆，不许再戳咱了！",
+					"连个可爱美少女都要戳的肥宅真恶心啊。",
+					"欸很烦欸！你戳锤子呢",
+				))
 			default:
 				// 频繁触发，不回复
 			}
@@ -104,4 +123,7 @@ func init() { // 插件主体
 				))
 			}
 		})
+}
+func randText(text ...string) message.MessageSegment {
+	return message.Text(text[rand.Intn(len(text))])
 }
