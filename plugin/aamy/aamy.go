@@ -31,6 +31,28 @@ func init() { // 插件主体
 	//		})
 	//	})
 
+	//engine.OnFullMatch("我的权限", zero.OnlyToMe).SetBlock(true).
+	//	Handle(func(ctx *zero.Ctx) {
+	//		if zero.SuperUserPermission(ctx) {
+	//			ctx.Send("超管")
+	//		}
+	//		if ctx.Event.Sender.Role == "owner" {
+	//			ctx.Send("群主")
+	//		}
+	//		if ctx.Event.Sender.Role == "admin" {
+	//			ctx.Send("群管")
+	//		}
+	//		ctx.Send("群员")
+	//	})
+
+	zero.On("notice/group_ban/ban", zero.OnlyToMe, zero.OnlyGroup).SetBlock(false).
+		Handle(func(ctx *zero.Ctx) {
+			oid := ctx.Event.OperatorID
+			if !isSuperUserPermission(oid) {
+				ctx.SetGroupLeave(ctx.Event.GroupID, false)
+			}
+		})
+
 	engine.OnRegex(`转账\[CQ:at,qq=(\d+)\]\s(\d+)`).SetBlock(true).
 		Handle(func(ctx *zero.Ctx) {
 			uid := ctx.Event.UserID
@@ -283,4 +305,13 @@ func DoubleAverage(count, amount int) int {
 	rand.Seed(time.Now().UnixNano())
 	x := rand.Intn(avg2) + min
 	return x
+}
+
+func isSuperUserPermission(uid int64) bool {
+	for _, su := range zero.BotConfig.SuperUsers {
+		if su == uid {
+			return true
+		}
+	}
+	return false
 }
