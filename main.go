@@ -241,8 +241,8 @@ func init() {
 
 	// 通过代码写死的方式添加主人账号
 	sus = append(sus, 2872999267)
-	sus = append(sus, 10000)
-	sus = append(sus, 10001)
+	sus = append(sus, 10000) // 银行
+	sus = append(sus, 10001) // 糖果堆
 	sus = append(sus, 1075696355)
 	sus = append(sus, 202497772)
 

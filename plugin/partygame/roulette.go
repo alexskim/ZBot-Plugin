@@ -2,8 +2,12 @@
 package partygame
 
 import (
+	"fmt"
+	"github.com/FloatTech/AnimeAPI/wallet"
 	"math/rand"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	ctrl "github.com/FloatTech/zbpctrl"
@@ -54,8 +58,7 @@ func init() { // 插件主体
 
 	checkSession := func(ctx *zero.Ctx) bool {
 		ss := getSession(ctx.Event.GroupID, dataPath)
-		switch ctx.Event.RawMessage {
-		case "创建轮盘赌":
+		if strings.HasPrefix(ctx.Event.RawMessage, "创建轮盘赌") {
 			if ss.GroupID == 0 {
 				return true
 			}
@@ -67,7 +70,7 @@ func init() { // 插件主体
 				ctx.SendChain(message.Text("轮盘赌游戏已经开始了"))
 				return false
 			}
-		default:
+		} else {
 			if ss.GroupID != ctx.Event.GroupID {
 				return false
 			}
@@ -81,6 +84,33 @@ func init() { // 插件主体
 				return false
 			}
 		}
+		//switch ctx.Event.RawMessage {
+		//case "创建轮盘赌":
+		//	if ss.GroupID == 0 {
+		//		return true
+		//	}
+		//	if ss.IsValid {
+		//		if ss.isExpire() {
+		//			ss.close()
+		//			return true
+		//		}
+		//		ctx.SendChain(message.Text("轮盘赌游戏已经开始了"))
+		//		return false
+		//	}
+		//default:
+		//	if ss.GroupID != ctx.Event.GroupID {
+		//		return false
+		//	}
+		//	if ss.IsValid {
+		//		if ss.isExpire() {
+		//			ctx.SendChain(message.Text("轮盘赌游戏已过期, 请重新开始"))
+		//			ss.close()
+		//			return false
+		//		}
+		//		ctx.SendChain(message.Text("轮盘赌游戏已经开始了"))
+		//		return false
+		//	}
+		//}
 		return true
 	}
 	// 创建轮盘赌
@@ -90,8 +120,40 @@ func init() { // 插件主体
 			uid := ctx.Event.UserID
 
 			// 创建会话
-			addSession(gid, uid, dataPath)
+			addSession(gid, uid, dataPath, 0)
 			ctx.SendChain(message.Text("游戏开始, 目前有1位玩家, 最多还能再加入2名玩家, 发送\"加入轮盘赌\"加入游戏"))
+		})
+
+	engine.OnRegex(`^创建轮盘赌\s*(\d+)`, zero.OnlyGroup, checkSession).SetBlock(true).
+		Handle(func(ctx *zero.Ctx) {
+			gid := ctx.Event.GroupID
+			uid := ctx.Event.UserID
+			min := 10
+			max := 1000
+			deposit, err := strconv.Atoi(ctx.State["regex_matched"].([]string)[1])
+			if err != nil {
+				ctx.SendChain(message.Text("ERROR: ", err))
+				return
+			}
+			if deposit < min {
+				deposit = min
+				ctx.Send(message.ReplyWithMessage(ctx.Event.MessageID, message.Text("创建糖果轮盘最低需要每人", min, "个~")))
+			}
+			if deposit > max {
+				deposit = max
+				ctx.Send(message.ReplyWithMessage(ctx.Event.MessageID, message.Text("创建糖果轮盘最高限制每人", max, "个~")))
+			}
+
+			money := wallet.GetWalletOf(uid)
+			if money < deposit {
+				ctx.Send(message.ReplyWithMessage(ctx.Event.MessageID, message.Text("啊这,你的糖果不够~")))
+				return
+			}
+
+			// 创建会话
+			addSession(gid, uid, dataPath, deposit)
+			ctx.SendChain(message.Text("游戏开始, 押金", deposit, "个糖果, 目前有1位玩家, 最多还能再加入2名玩家, 发送\"加入轮盘赌\"加入游戏"))
+
 		})
 
 	// 加入轮盘赌
@@ -107,6 +169,11 @@ func init() { // 插件主体
 
 			if ss.countUser() >= int(ss.Max) {
 				ctx.SendChain(message.Text("目前已有", ss.countUser(), "位玩家, 已达人数上限, 发送\"开始轮盘赌\"进行游戏"))
+				return
+			}
+			money := wallet.GetWalletOf(uid)
+			if ss.Deposit != 0 && money < ss.Deposit {
+				ctx.Send(message.ReplyWithMessage(ctx.Event.MessageID, message.Text("啊这,你的糖果不够~")))
 				return
 			}
 			ss.addUser(uid)
@@ -133,6 +200,16 @@ func init() { // 插件主体
 
 			ss.IsValid = true
 			rule := "轮盘容量为6, 但只填充了一发子弹, 请参与游戏的双方轮流发送`开火`, 枪响结束后"
+
+			if ss.Deposit != 0 {
+				amount := 0
+				for _, user := range ss.Users {
+					amount += ss.Deposit
+					_ = wallet.InsertWalletOf(user, -ss.Deposit)
+				}
+				_ = wallet.InsertWalletOf(zero.BotConfig.SuperUsers[1], amount)
+				rule = fmt.Sprintf("每名参与者已扣除%d个糖果,%s", ss.Deposit, rule)
+			}
 			// 打乱参与人
 			ss.rotateUser()
 			// 发送游戏开始消息
@@ -155,6 +232,7 @@ func init() { // 插件主体
 				case <-tick.C:
 					ctx.SendChain(message.Text("轮盘赌, 还有15s过期"))
 				case <-after.C:
+					calcAward(ctx, ss, 0)
 					ctx.Send(
 						message.ReplyWithMessage(ctx.Event.MessageID,
 							message.Text("轮盘赌超时, 游戏结束..."),
@@ -162,6 +240,7 @@ func init() { // 插件主体
 					)
 					return
 				case <-stop:
+					calcAward(ctx, ss, 0)
 					ss := getSession(ctx.Event.GroupID, dataPath)
 					ss.close()
 					ctx.Send("轮盘赌已终止")
@@ -183,17 +262,47 @@ func init() { // 插件主体
 						s.close()
 						ctx.SendChain(message.Text("你长舒了一口气, 并反手击毙了"), message.At(s.Users[1]))
 						c.Event.UserID = s.Users[1]
-						getTruthOrDare(c)
+						calcAward(ctx, ss, s.Users[1])
+						if s.Deposit == 0 {
+							getTruthOrDare(c)
+						}
 						return
 					}
 					if s.openFire() {
 						s.close()
 						ctx.SendChain(message.Text(dieMsg[rand.Intn(len(dieMsg))]))
-						getTruthOrDare(c)
+						calcAward(ctx, ss, s.Users[0])
+						if s.Deposit == 0 {
+							getTruthOrDare(c)
+						}
 						return
 					}
 					ctx.SendChain(message.Text(aliveMsg[rand.Intn(len(aliveMsg))]), message.Text(",轮到"), message.At(s.Users[1]), message.Text("开火"))
 				}
 			}
 		})
+}
+
+func calcAward(ctx *zero.Ctx, s Session, fail int64) {
+	if s.Deposit != 0 {
+		var msg []message.MessageSegment
+		partNum := len(s.Users)
+		all := partNum * s.Deposit
+		tax := all / 10
+		all -= tax
+		amount := all
+		for _, user := range s.Users {
+			if user != fail {
+				ins := all / (partNum - 1)
+				amount -= ins
+				_ = wallet.InsertWalletOf(zero.BotConfig.SuperUsers[1], -ins)
+				_ = wallet.InsertWalletOf(user, ins)
+				msg = append(msg, message.At(user))
+				msg = append(msg, message.Text("获得了", ins, "个糖果!\n"))
+			}
+		}
+		tax += amount
+		msg = append(msg, message.Text("本场收取", tax, "糖果的手续费~"))
+		ctx.SendChain(msg...)
+	}
 }

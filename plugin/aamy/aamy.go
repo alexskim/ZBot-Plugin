@@ -143,7 +143,7 @@ func init() { // 插件主体
 				return
 			}
 			tranMoney := -userMoney + 50
-			err := wallet.InsertWalletOf(zero.BotConfig.SuperUsers[0], -tranMoney)
+			err := wallet.InsertWalletOf(zero.BotConfig.SuperUsers[1], -tranMoney)
 			if err != nil {
 				fmt.Println(err)
 				ctx.Send(message.ReplyWithMessage(ctx.Event.MessageID, message.Text("出现了错误!")))

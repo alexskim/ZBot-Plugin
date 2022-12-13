@@ -15,6 +15,7 @@ type Session struct {
 	Users      []int64 // 参与者
 	Max        int64   // 最大人数
 	Cartridges []int   // 弹夹
+	Deposit    int     // 押金
 	IsValid    bool    // 是否有效
 	ExpireTime int64   // 过期时间
 	CreateTime int64   // 创建时间
@@ -86,13 +87,14 @@ func getSession(gid int64, dataPath string) Session {
 }
 
 // 添加会话
-func addSession(gid, uid int64, dataPath string) {
+func addSession(gid, uid int64, dataPath string, deposit int) {
 	cls := Session{}
 	cls.GroupID = gid
 	cls.Creator = uid
 	cls.Users = append(cls.Users, uid)
 	cls.IsValid = false
 	cls.Max = 3
+	cls.Deposit = deposit
 	cls.Cartridges = cls.rotateRoulette()
 	cls.ExpireTime = 300
 	cls.CreateTime = time.Now().Unix()

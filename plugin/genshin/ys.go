@@ -172,8 +172,8 @@ func init() {
 			if !store.is5starsmode() {
 				realReword := reword * invest / 1000
 				insert := realReword - invest
-				_ = wallet.InsertWalletOf(zero.BotConfig.SuperUsers[0], invest)
-				_ = wallet.InsertWalletOf(zero.BotConfig.SuperUsers[0], -realReword)
+				_ = wallet.InsertWalletOf(zero.BotConfig.SuperUsers[1], invest)
+				_ = wallet.InsertWalletOf(zero.BotConfig.SuperUsers[1], -realReword)
 				err := wallet.InsertWalletOf(ctx.Event.UserID, insert)
 				fmt.Println("[ys] 投入糖果", invest)
 				fmt.Println("[ys] 产出数值", reword, "‰")
