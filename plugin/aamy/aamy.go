@@ -53,7 +53,7 @@ func init() { // 插件主体
 			}
 		})
 
-	zero.OnFullMatchGroup([]string{"查钱包", "查余额", "查看钱包", "查看余额"}).SetBlock(true).Handle(func(ctx *zero.Ctx) {
+	engine.OnFullMatchGroup([]string{"查钱包", "查余额", "查看钱包", "查看余额"}).SetBlock(true).Handle(func(ctx *zero.Ctx) {
 		uid := ctx.Event.UserID
 		money := wallet.GetWalletOf(uid)
 		ctx.SendChain(message.At(uid), message.Text("你的钱包当前有", money, "块糖果"))
