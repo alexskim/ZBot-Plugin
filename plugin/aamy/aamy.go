@@ -16,7 +16,7 @@ func init() { // 插件主体
 	engine := control.Register("aamy", &ctrl.Options[*zero.Ctx]{
 		DisableOnDefault: false,
 		Brief:            "",
-		Help:             "",
+		Help:             "神秘插件",
 	})
 
 	//engine.OnRegex(`\[CQ:reply,id=(\-?[0-9]+)\].*撤回.*`).SetBlock(true).
@@ -52,6 +52,12 @@ func init() { // 插件主体
 				ctx.SetGroupLeave(ctx.Event.GroupID, false)
 			}
 		})
+
+	zero.OnFullMatchGroup([]string{"查钱包", "查余额", "查看钱包", "查看余额"}).SetBlock(true).Handle(func(ctx *zero.Ctx) {
+		uid := ctx.Event.UserID
+		money := wallet.GetWalletOf(uid)
+		ctx.SendChain(message.At(uid), message.Text("你的钱包当前有", money, "块糖果"))
+	})
 
 	engine.OnRegex(`转账\[CQ:at,qq=(\d+)\]\s(\d+)`).SetBlock(true).
 		Handle(func(ctx *zero.Ctx) {
