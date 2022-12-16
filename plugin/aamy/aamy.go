@@ -54,13 +54,7 @@ func init() { // 插件主体
 			}
 		})
 
-	engine.OnFullMatchGroup([]string{"查钱包", "查余额", "查看钱包", "查看余额"}).SetBlock(true).Handle(func(ctx *zero.Ctx) {
-		uid := ctx.Event.UserID
-		money := wallet.GetWalletOf(uid)
-		ctx.SendChain(message.At(uid), message.Text("你的钱包当前有", money, "块糖果"))
-	})
-
-	engine.OnRegex(`转账\[CQ:at,qq=(\d+)\]\s(\d+)`).SetBlock(true).
+	engine.OnRegex(`转账\[CQ:at,qq=(\d+)\]\s*(\d+)`).SetBlock(true).
 		Handle(func(ctx *zero.Ctx) {
 			uid := ctx.Event.UserID
 			target, _ := strconv.ParseInt(ctx.State["regex_matched"].([]string)[1], 10, 64)
@@ -76,16 +70,124 @@ func init() { // 插件主体
 				ctx.Send(message.ReplyWithMessage(ctx.Event.MessageID, message.Text("转出失败,请检查!")))
 				return
 			}
-			err = wallet.InsertWalletOf(target, money)
+			tap1 := 100
+			tap2 := 200
+			tap3 := 500
+			tap4 := 1000
+			tap5 := 2000
+			tap6 := 5000
+			tap7 := 10000
+			tap8 := 20000
+			tap9 := 50000
+			tap10 := 100000
+			tap11 := 200000
+			tap12 := 500000
+			tap1Tax := 50
+			tap2Tax := 20
+			tap3Tax := 19
+			tap4Tax := 17
+			tap5Tax := 15
+			tap6Tax := 13
+			tap7Tax := 11
+			tap8Tax := 9
+			tap9Tax := 7
+			tap10Tax := 5
+			tap11Tax := 3
+			tap12Tax := 2
+
+			tax := 0
+			if money > tap1 {
+				if money < tap2 {
+					tax += (money - tap1) / tap1Tax
+				} else {
+					tax += (tap2 - tap1) / tap1Tax
+				}
+			}
+			if money > tap2 {
+				if money < tap3 {
+					tax += (money - tap2) / tap2Tax
+				} else {
+					tax += (tap3 - tap2) / tap2Tax
+				}
+			}
+			if money > tap3 {
+				if money < tap4 {
+					tax += (money - tap3) / tap3Tax
+				} else {
+					tax += (tap4 - tap3) / tap3Tax
+				}
+			}
+			if money > tap4 {
+				if money < tap5 {
+					tax += (money - tap4) / tap4Tax
+				} else {
+					tax += (tap5 - tap4) / tap4Tax
+				}
+			}
+			if money > tap5 {
+				if money < tap6 {
+					tax += (money - tap5) / tap5Tax
+				} else {
+					tax += (tap6 - tap5) / tap5Tax
+				}
+			}
+			if money > tap6 {
+				if money < tap7 {
+					tax += (money - tap6) / tap6Tax
+				} else {
+					tax += (tap7 - tap6) / tap6Tax
+				}
+			}
+			if money > tap7 {
+				if money < tap8 {
+					tax += (money - tap7) / tap7Tax
+				} else {
+					tax += (tap8 - tap7) / tap7Tax
+				}
+			}
+			if money > tap8 {
+				if money < tap9 {
+					tax += (money - tap8) / tap8Tax
+				} else {
+					tax += (tap9 - tap8) / tap8Tax
+				}
+			}
+			if money > tap9 {
+				if money < tap10 {
+					tax += (money - tap9) / tap9Tax
+				} else {
+					tax += (tap10 - tap9) / tap9Tax
+				}
+			}
+			if money > tap10 {
+				if money < tap11 {
+					tax += (money - tap10) / tap10Tax
+				} else {
+					tax += (tap11 - tap10) / tap10Tax
+				}
+			}
+			if money > tap11 {
+				if money < tap12 {
+					tax += (money - tap11) / tap11Tax
+				} else {
+					tax += (tap12 - tap11) / tap11Tax
+				}
+			}
+			if money > tap12 {
+				tax += (money - tap12) / tap12Tax
+			}
+
+			err = wallet.InsertWalletOf(target, money-tax)
+			err = wallet.InsertWalletOf(zero.BotConfig.SuperUsers[1], tax)
 			if err != nil {
 				fmt.Println(err)
 				ctx.Send(message.ReplyWithMessage(ctx.Event.MessageID, message.Text("转入失败,请检查!")))
 				return
 			}
-			ctx.Send(message.ReplyWithMessage(ctx.Event.MessageID, message.Text("糖果转账成功!")))
+			ctx.Send(message.ReplyWithMessage(ctx.Event.MessageID, message.Text("糖果转账成功!\n转账途中掉了", tax, "个糖果!")))
 		})
 
-	engine.OnRegex(`无中生有\s(\d+)`, zero.SuperUserPermission).SetBlock(true).
+	engine.OnRegex(`无中生有\s*(\d+)`, zero.SuperUserPermission).SetBlock(true).
 		Handle(func(ctx *zero.Ctx) {
 			uid := ctx.Event.UserID
 			money, _ := strconv.Atoi(ctx.State["regex_matched"].([]string)[1])
@@ -154,7 +256,7 @@ func init() { // 插件主体
 
 		})
 
-	engine.OnRegex(`捐银行(\d+)`).SetBlock(true).
+	engine.OnRegex(`捐银行\s*(\d+)`).SetBlock(true).
 		Handle(func(ctx *zero.Ctx) {
 			uid := ctx.Event.UserID
 			donatMoney, _ := strconv.Atoi(ctx.State["regex_matched"].([]string)[1])
@@ -209,7 +311,7 @@ func init() { // 插件主体
 			ctx.Send(message.ReplyWithMessage(ctx.Event.MessageID, message.Text("V你", tranMoney, "糖果,继续加油!")))
 		})
 
-	engine.OnRegex(`填糖果堆(\d+)`).SetBlock(true).
+	engine.OnRegex(`填糖果堆\s*(\d+)`).SetBlock(true).
 		Handle(func(ctx *zero.Ctx) {
 			uid := ctx.Event.UserID
 			luckyMoney, _ := strconv.Atoi(ctx.State["regex_matched"].([]string)[1])
