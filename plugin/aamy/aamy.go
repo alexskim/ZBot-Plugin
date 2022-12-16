@@ -184,7 +184,11 @@ func init() { // 插件主体
 				ctx.Send(message.ReplyWithMessage(ctx.Event.MessageID, message.Text("转入失败,请检查!")))
 				return
 			}
-			ctx.Send(message.ReplyWithMessage(ctx.Event.MessageID, message.Text("糖果转账成功!\n转账途中掉了", tax, "个糖果!")))
+			if tax != 0 {
+				ctx.Send(message.ReplyWithMessage(ctx.Event.MessageID, message.Text("糖果转账成功!\n转账途中掉了", tax, "个糖果!")))
+			} else {
+				ctx.Send(message.ReplyWithMessage(ctx.Event.MessageID, message.Text("糖果转账成功!")))
+			}
 		})
 
 	engine.OnRegex(`无中生有\s*(\d+)`, zero.SuperUserPermission).SetBlock(true).
