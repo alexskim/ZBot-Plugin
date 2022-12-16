@@ -5,6 +5,7 @@ import (
 	"github.com/FloatTech/AnimeAPI/wallet"
 	ctrl "github.com/FloatTech/zbpctrl"
 	"github.com/FloatTech/zbputils/control"
+	"github.com/FloatTech/zbputils/ctxext"
 	zero "github.com/wdvxdr1123/ZeroBot"
 	"github.com/wdvxdr1123/ZeroBot/message"
 	"math/rand"
@@ -101,6 +102,56 @@ func init() { // 插件主体
 		Handle(func(ctx *zero.Ctx) {
 			money := wallet.GetWalletOf(zero.BotConfig.SuperUsers[1])
 			ctx.Send(message.ReplyWithMessage(ctx.Event.MessageID, message.Text("银行有", money, "块糖果!")))
+		})
+
+	engine.OnFullMatch("抢银行").Limit(ctxext.LimitByGroup).SetBlock(true).
+		Handle(func(ctx *zero.Ctx) {
+			bankMoney := wallet.GetWalletOf(zero.BotConfig.SuperUsers[1])
+			thiefMoney := wallet.GetWalletOf(ctx.Event.UserID)
+			if thiefMoney > bankMoney {
+				ctx.Send(message.ReplyWithMessage(ctx.Event.MessageID, message.Text("别闹!你才是最大的银行!")))
+				return
+			}
+			if thiefMoney < 51 {
+				ctx.Send(message.ReplyWithMessage(ctx.Event.MessageID, message.Text("保安把你拦住了!")))
+				return
+			}
+			lucky := rand.Intn(100000)
+			if lucky == 1 && thiefMoney > 100 {
+				err := wallet.InsertWalletOf(zero.BotConfig.SuperUsers[1], -bankMoney)
+				if err != nil {
+					fmt.Println(err)
+					ctx.Send(message.ReplyWithMessage(ctx.Event.MessageID, message.Text("出现了错误!")))
+					return
+				}
+				err = wallet.InsertWalletOf(ctx.Event.UserID, bankMoney)
+				if err != nil {
+					fmt.Println(err)
+					ctx.Send(message.ReplyWithMessage(ctx.Event.MessageID, message.Text("出现了错误!")))
+					return
+				}
+				ctx.Send(message.ReplyWithMessage(ctx.Event.MessageID, message.Text("你从银行手上抢到了", bankMoney, "块糖果!")))
+				return
+			}
+			dropMoney := (thiefMoney / 10) + 200
+			if dropMoney < 50 {
+				dropMoney = thiefMoney
+			}
+			err := wallet.InsertWalletOf(zero.BotConfig.SuperUsers[1], dropMoney)
+			if err != nil {
+				fmt.Println(err)
+				ctx.Send(message.ReplyWithMessage(ctx.Event.MessageID, message.Text("出现了错误!")))
+				return
+			}
+			err = wallet.InsertWalletOf(ctx.Event.UserID, -dropMoney)
+			if err != nil {
+				fmt.Println(err)
+				ctx.Send(message.ReplyWithMessage(ctx.Event.MessageID, message.Text("出现了错误!")))
+				return
+			}
+			ctx.Send(message.ReplyWithMessage(ctx.Event.MessageID, message.Text("银行用源源不绝的糖果砸死了你!你在落荒而逃的途中掉了", dropMoney, "块糖果!")))
+			return
+
 		})
 
 	engine.OnRegex(`捐银行(\d+)`).SetBlock(true).

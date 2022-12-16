@@ -5,6 +5,17 @@ import (
 	"archive/zip"
 	"fmt"
 	"github.com/FloatTech/AnimeAPI/wallet"
+	fcext "github.com/FloatTech/floatbox/ctxext"
+	"github.com/FloatTech/floatbox/img/writer"
+	"github.com/FloatTech/floatbox/process"
+	sql "github.com/FloatTech/sqlite"
+	ctrl "github.com/FloatTech/zbpctrl"
+	"github.com/FloatTech/zbputils/control"
+	"github.com/FloatTech/zbputils/ctxext"
+	"github.com/golang/freetype"
+	"github.com/sirupsen/logrus"
+	zero "github.com/wdvxdr1123/ZeroBot"
+	"github.com/wdvxdr1123/ZeroBot/message"
 	"image"
 	"image/color"
 	"image/draw"
@@ -14,21 +25,37 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"sync/atomic"
-
-	fcext "github.com/FloatTech/floatbox/ctxext"
-	"github.com/FloatTech/floatbox/img/writer"
-	"github.com/FloatTech/floatbox/process"
-	ctrl "github.com/FloatTech/zbpctrl"
-	"github.com/FloatTech/zbputils/control"
-	"github.com/FloatTech/zbputils/ctxext"
-	"github.com/golang/freetype"
-	"github.com/sirupsen/logrus"
-	zero "github.com/wdvxdr1123/ZeroBot"
-	"github.com/wdvxdr1123/ZeroBot/message"
+	"time"
 )
 
 type zipfilestructure map[string][]*zip.File
+
+type dbs struct {
+	db *sql.Sqlite
+	sync.RWMutex
+}
+
+// 全局设置
+type setting struct {
+	Key   string
+	Value string
+}
+
+// 全局设置
+type settings struct {
+	ThreeRate int
+	FourRate  int
+	Four2Rate int
+	FiveRate  int
+	//five2Rate   int
+	ThreeReword int
+	FourReword  int
+	Four2Reword int
+	FiveReword  int
+	Five2Reword int
+}
 
 var (
 	totl                   uint64 // 累计抽奖次数
@@ -37,15 +64,34 @@ var (
 	namereg                = regexp.MustCompile(`_(.*)\.png`)
 	min                    = 10
 	max                    = 1000
-)
+	database               = &dbs{
+		db: &sql.Sqlite{},
+	}
 
-func init() {
-	engine := control.Register("genshin", &ctrl.Options[*zero.Ctx]{
+	engine = control.Register("genshin", &ctrl.Options[*zero.Ctx]{
 		DisableOnDefault: false,
 		Brief:            "模拟抽卡",
 		Help:             "- 十连\n- 切换卡池\n- 十连<数字>",
 		PublicDataFolder: "Genshin",
 	}).ApplySingle(ctxext.DefaultSingle)
+
+	getDb = fcext.DoOnceOnSuccess(func(ctx *zero.Ctx) bool {
+		database.db.DBPath = engine.DataFolder() + "ys.db"
+		err := database.db.Open(time.Hour * 24)
+		if err == nil {
+			err = database.db.Create("setting", &setting{})
+			if err != nil {
+				ctx.SendChain(message.Text("[ERROR]:", err))
+				return false
+			}
+			return true
+		}
+		ctx.SendChain(message.Text("[ERROR]:", err))
+		return false
+	})
+)
+
+func init() {
 
 	engine.OnFullMatch("切换卡池").SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(func(ctx *zero.Ctx) {
@@ -69,6 +115,7 @@ func init() {
 			err := c.SetData(gid, int64(store))
 			if err != nil {
 				process.SleepAbout1sTo2s()
+				fmt.Println(err)
 				ctx.SendChain(message.Text("ERROR: ", err))
 			}
 		})
@@ -78,17 +125,19 @@ func init() {
 			zipfile := engine.DataFolder() + "Genshin.zip"
 			_, err := engine.GetLazyData("Genshin.zip", false)
 			if err != nil {
+				fmt.Println(err)
 				ctx.SendChain(message.Text("ERROR: ", err))
 				return false
 			}
 			err = parsezip(zipfile)
 			if err != nil {
+				fmt.Println(err)
 				ctx.SendChain(message.Text("ERROR: ", err))
 				return false
 			}
 			return true
 		},
-	)).SetBlock(true).Limit(ctxext.LimitByUser).
+	), getDb).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(func(ctx *zero.Ctx) {
 			c, ok := ctx.State["manager"].(*ctrl.Control[*zero.Ctx])
 			if !ok {
@@ -100,8 +149,10 @@ func init() {
 				gid = -ctx.Event.UserID
 			}
 			store := (storage)(c.GetData(gid))
-			img, str, mode, _, err := randnums(10, store)
+			sts := database.getSettings()
+			img, str, mode, _, err := randnums(10, store, sts)
 			if err != nil {
+				fmt.Println(err)
 				ctx.SendChain(message.Text("ERROR: ", err))
 				return
 			}
@@ -121,17 +172,19 @@ func init() {
 			zipfile := engine.DataFolder() + "Genshin.zip"
 			_, err := engine.GetLazyData("Genshin.zip", false)
 			if err != nil {
+				fmt.Println(err)
 				ctx.SendChain(message.Text("ERROR: ", err))
 				return false
 			}
 			err = parsezip(zipfile)
 			if err != nil {
+				fmt.Println(err)
 				ctx.SendChain(message.Text("ERROR: ", err))
 				return false
 			}
 			return true
 		},
-	)).SetBlock(true).Limit(ctxext.LimitByUser).
+	), getDb).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(func(ctx *zero.Ctx) {
 			c, ok := ctx.State["manager"].(*ctrl.Control[*zero.Ctx])
 			if !ok {
@@ -140,6 +193,7 @@ func init() {
 			}
 			invest, err := strconv.Atoi(ctx.State["regex_matched"].([]string)[1])
 			if err != nil {
+				fmt.Println(err)
 				ctx.SendChain(message.Text("ERROR: ", err))
 				return
 			}
@@ -162,8 +216,10 @@ func init() {
 				gid = -ctx.Event.UserID
 			}
 			store := (storage)(c.GetData(gid))
-			img, str, mode, reword, err := randnums(10, store)
+			sts := database.getSettings()
+			img, str, mode, reword, err := randnums(10, store, sts)
 			if err != nil {
+				fmt.Println(err)
 				ctx.SendChain(message.Text("ERROR: ", err))
 				return
 			}
@@ -203,9 +259,158 @@ func init() {
 
 			cl()
 		})
+
+	engine.OnRegex(`^五十连\s*(\d+)`, fcext.DoOnceOnSuccess(
+		func(ctx *zero.Ctx) bool {
+			zipfile := engine.DataFolder() + "Genshin.zip"
+			_, err := engine.GetLazyData("Genshin.zip", false)
+			if err != nil {
+				fmt.Println(err)
+				ctx.SendChain(message.Text("ERROR: ", err))
+				return false
+			}
+			err = parsezip(zipfile)
+			if err != nil {
+				fmt.Println(err)
+				ctx.SendChain(message.Text("ERROR: ", err))
+				return false
+			}
+			return true
+		},
+	), getDb).SetBlock(true).Limit(ctxext.LimitByUser).
+		Handle(func(ctx *zero.Ctx) {
+			c, ok := ctx.State["manager"].(*ctrl.Control[*zero.Ctx])
+			if !ok {
+				ctx.SendChain(message.Text("找不到服务!"))
+				return
+			}
+			invest, err := strconv.Atoi(ctx.State["regex_matched"].([]string)[1])
+			if err != nil {
+				fmt.Println(err)
+				ctx.SendChain(message.Text("ERROR: ", err))
+				return
+			}
+			uid := ctx.Event.UserID
+			money := wallet.GetWalletOf(uid)
+			if invest < min {
+				ctx.Send(message.ReplyWithMessage(ctx.Event.MessageID, message.Text("单次最低投入", min, "个糖果哦~")))
+				invest = min
+			}
+			if invest > max {
+				ctx.Send(message.ReplyWithMessage(ctx.Event.MessageID, message.Text("单次最高投入", max, "个糖果哦~")))
+				invest = max
+			}
+			if money < (invest * 5) {
+				ctx.Send(message.ReplyWithMessage(ctx.Event.MessageID, message.Text("啊这,你的糖果不够~")))
+				return
+			}
+			gid := ctx.Event.GroupID
+			if gid == 0 {
+				gid = -ctx.Event.UserID
+			}
+			store := (storage)(c.GetData(gid))
+			sts := database.getSettings()
+			img1, str1, _, reword1, err := randnums(10, store, sts)
+			img2, str2, _, reword2, err2 := randnums(10, store, sts)
+			img3, str3, _, reword3, err3 := randnums(10, store, sts)
+			img4, str4, _, reword4, err4 := randnums(10, store, sts)
+			img5, str5, _, reword5, err5 := randnums(10, store, sts)
+			if err != nil {
+				fmt.Println(err)
+				ctx.SendChain(message.Text("ERROR: ", err))
+				return
+			}
+			if err2 != nil {
+				fmt.Println(err)
+				ctx.SendChain(message.Text("ERROR: ", err))
+				return
+			}
+			if err3 != nil {
+				fmt.Println(err)
+				ctx.SendChain(message.Text("ERROR: ", err))
+				return
+			}
+			if err4 != nil {
+				fmt.Println(err)
+				ctx.SendChain(message.Text("ERROR: ", err))
+				return
+			}
+			if err5 != nil {
+				fmt.Println(err)
+				ctx.SendChain(message.Text("ERROR: ", err))
+				return
+			}
+
+			if str1 == "" {
+				str1 = "什么都没有~"
+			}
+			if str2 == "" {
+				str2 = "什么都没有~"
+			}
+			if str3 == "" {
+				str3 = "什么都没有~"
+			}
+			if str4 == "" {
+				str4 = "什么都没有~"
+			}
+			if str5 == "" {
+				str5 = "什么都没有~"
+			}
+
+			b1, cl1 := writer.ToBytes(img1)
+			b2, cl2 := writer.ToBytes(img2)
+			b3, cl3 := writer.ToBytes(img3)
+			b4, cl4 := writer.ToBytes(img4)
+			b5, cl5 := writer.ToBytes(img5)
+			rst := ""
+			if !store.is5starsmode() {
+				realReword1 := reword1 * invest / 1000
+				realReword2 := reword2 * invest / 1000
+				realReword3 := reword3 * invest / 1000
+				realReword4 := reword4 * invest / 1000
+				realReword5 := reword5 * invest / 1000
+				realReword := realReword1 + realReword2 + realReword3 + realReword4 + realReword5
+				reword := reword1 + reword2 + reword3 + reword4 + reword5
+				insert := realReword - (invest * 5)
+				_ = wallet.InsertWalletOf(zero.BotConfig.SuperUsers[1], invest*5)
+				_ = wallet.InsertWalletOf(zero.BotConfig.SuperUsers[1], -realReword)
+				err := wallet.InsertWalletOf(ctx.Event.UserID, insert)
+				fmt.Println("[ys] 投入糖果", invest*5)
+				fmt.Println("[ys] 产出数值", reword, "‰")
+				fmt.Println("[ys] 产出糖果", realReword)
+				fmt.Println("[ys] 真实收获", insert)
+				if err != nil {
+					fmt.Println("[ys] 钱包坏掉力", err)
+					ctx.SendChain(message.Text("[ys] 钱包坏掉力"))
+					return
+				}
+				if realReword < 0 {
+					rst = fmt.Sprintf("你投入了%d块糖果,并被扣除了%d块糖果~", invest*5, -realReword)
+				} else if realReword == 0 {
+					rst = fmt.Sprintf("你投入了%d块糖果,然后无事发生~", invest*5)
+				} else {
+					rst = fmt.Sprintf("你投入了%d块糖果,并收获了%d块糖果~", invest*5, realReword)
+				}
+			} else {
+				rst = "当前是五星模式!"
+			}
+			ctx.Send(message.ReplyWithMessage(ctx.Event.MessageID,
+				message.Text("恭喜你抽到了: \n", str1), message.ImageBytes(b1),
+				message.Text("\n", str2), message.ImageBytes(b2),
+				message.Text("\n", str3), message.ImageBytes(b3),
+				message.Text("\n", str4), message.ImageBytes(b4),
+				message.Text("\n", str5), message.ImageBytes(b5),
+				message.Text("\n", rst)))
+
+			cl1()
+			cl2()
+			cl3()
+			cl4()
+			cl5()
+		})
 }
 
-func randnums(nums int, store storage) (rgba *image.RGBA, str string, replyMode bool, reword int, err error) {
+func randnums(nums int, store storage, sts settings) (rgba *image.RGBA, str string, replyMode bool, reword int, err error) {
 	var (
 		fours, fives                  = make([]*zip.File, 0, 10), make([]*zip.File, 0, 10)                           // 抽到 四, 五星角色
 		threeArms, fourArms, fiveArms = make([]*zip.File, 0, 10), make([]*zip.File, 0, 10), make([]*zip.File, 0, 10) // 抽到 三 , 四, 五星武器
@@ -222,19 +427,32 @@ func randnums(nums int, store storage) (rgba *image.RGBA, str string, replyMode 
 		fourlen                 = len(filetree["four"])
 		four2len                = len(filetree["four2"])
 
-		threeReword, fourReword, fiveReword = -200, 500, 6000
-		luckyMode                           = 0
+		//threeReword, fourReword, fiveReword = -200, 350, 7000
+		luckyMode = 0
 	)
+	fmt.Println(sts)
+	threeRate := sts.ThreeRate // 800
+	fourRate := sts.FourRate   // 890
+	four2Rate := sts.Four2Rate // 980
+	fiveRate := sts.FiveRate   // 990
+	//five2Rate := settings.threeRate
+	threeReword := sts.ThreeReword
+	fourReword := sts.FourReword
+	four2Reword := sts.Four2Reword
+	fiveReword := sts.FiveReword
+	five2Reword := sts.Five2Reword
 
-	if totl%9 == 0 { // 累计9次加入一个五星
-		fmt.Println("[ys] 保底5x +", fiveReword, ",now ", reword)
-		reword += fiveReword
+	if totl%90 == 0 { // 累计9次加入一个五星
 		switch rand.Intn(2) {
 		case 0:
 			fiveN++
+			fmt.Println("[ys] 保底5x +", fiveReword, ",now ", reword)
+			reword += fiveReword
 			fives = append(fives, filetree["five"][rand.Intn(fivelen)])
 		case 1:
 			fiveN2++
+			fmt.Println("[ys] 保底5x +", five2Reword, ",now ", reword)
+			reword += five2Reword
 			fiveArms = append(fiveArms, filetree["five2"][rand.Intn(five2len)])
 		}
 		nums--
@@ -253,35 +471,36 @@ func randnums(nums int, store storage) (rgba *image.RGBA, str string, replyMode 
 		}
 	} else { // 默认模式
 		lucky := rand.Intn(100000)
+		fmt.Println("[ys] lucky ", lucky)
 		switch {
 		case lucky >= 0 && lucky <= 99900:
 			for i := 0; i < nums; i++ {
-				a := rand.Intn(1000) // 抽卡几率 三星80% 四星17% 五星3%
+				a := rand.Intn(1000) // 抽卡几率 三星80% 四星19% 五星1%
 				switch {
-				case a >= 0 && a <= 800:
+				case a >= 0 && a <= threeRate:
 					threeN2++
 					reword += threeReword
-					fmt.Println("[ys] 3x +", threeReword, ",now ", reword)
+					fmt.Println("[ys] 3x +", threeReword, ",now ", reword, ",a ", a)
 					threeArms = append(threeArms, filetree["Three"][rand.Intn(threelen)])
-				case a > 800 && a <= 885:
+				case a > threeRate && a <= fourRate:
 					fourN++
 					reword += fourReword
-					fmt.Println("[ys] 4x +", fourReword, ",now ", reword)
+					fmt.Println("[ys] 4x +", fourReword, ",now ", reword, ",a ", a)
 					fours = append(fours, filetree["four"][rand.Intn(fourlen)]) // 随机角色
-				case a > 885 && a <= 970:
+				case a > fourRate && a <= four2Rate:
 					fourN2++
-					reword += fourReword
-					fmt.Println("[ys] 4x +", fourReword, ",now ", reword)
+					reword += four2Reword
+					fmt.Println("[ys] 4x +", four2Reword, ",now ", reword, ",a ", a)
 					fourArms = append(fourArms, filetree["four2"][rand.Intn(four2len)]) // 随机武器
-				case a > 970 && a <= 985:
+				case a > four2Rate && a <= fiveRate:
 					fiveN++
 					reword += fiveReword
-					fmt.Println("[ys] 5x +", fiveReword, ",now ", reword)
+					fmt.Println("[ys] 5x +", fiveReword, ",now ", reword, ",a ", a)
 					fives = append(fives, filetree["five"][rand.Intn(fivelen)])
 				default:
 					fiveN2++
-					reword += fiveReword
-					fmt.Println("[ys] 5x +", fiveReword, ",now ", reword)
+					reword += five2Reword
+					fmt.Println("[ys] 5x +", five2Reword, ",now ", reword, ",a ", a)
 					fiveArms = append(fiveArms, filetree["five2"][rand.Intn(five2len)])
 				}
 			}
@@ -296,7 +515,7 @@ func randnums(nums int, store storage) (rgba *image.RGBA, str string, replyMode 
 					fives = append(fives, filetree["five"][rand.Intn(fivelen)])
 				case 1:
 					fiveN2++
-					reword += fiveReword
+					reword += five2Reword
 					fiveArms = append(fiveArms, filetree["five2"][rand.Intn(five2len)])
 				}
 			}
@@ -311,7 +530,7 @@ func randnums(nums int, store storage) (rgba *image.RGBA, str string, replyMode 
 					fives = append(fives, filetree["five"][rand.Intn(fivelen)])
 				case 1:
 					fiveN2++
-					reword += fiveReword * 10
+					reword += five2Reword * 10
 					fiveArms = append(fiveArms, filetree["five2"][rand.Intn(five2len)])
 				}
 			}
@@ -319,16 +538,18 @@ func randnums(nums int, store storage) (rgba *image.RGBA, str string, replyMode 
 
 		if fourN+fourN2 == 0 && threeN2 > 0 { // 没有四星时自动加入
 			reword -= threeReword
-			reword += fourReword
-			fmt.Println("[ys] 保底4x -", threeReword, " ,+", fourReword, ",now ", reword)
 			threeN2--
 			threeArms = threeArms[:len(threeArms)-1]
 			switch rand.Intn(2) {
 			case 0:
 				fourN++
+				reword += fourReword
+				fmt.Println("[ys] 保底4x -", threeReword, " ,+", fourReword, ",now ", reword)
 				fours = append(fours, filetree["four"][rand.Intn(fourlen)]) // 随机角色
 			case 1:
 				fourN2++
+				reword += four2Reword
+				fmt.Println("[ys] 保底4x -", threeReword, " ,+", four2Reword, ",now ", reword)
 				fourArms = append(fourArms, filetree["four2"][rand.Intn(four2len)]) // 随机武器
 			}
 		}
@@ -526,4 +747,79 @@ func reply(z []*zip.File, num int, nameStr string) string {
 		tmp.WriteString(namereg.FindStringSubmatch(z[i].Name)[1] + " * ")
 	}
 	return tmp.String()
+}
+
+func (sql *dbs) getSettings() (sts settings) {
+	sql.Lock()
+	defer sql.Unlock()
+	err := sql.db.Create("setting", &setting{})
+	if err != nil {
+		return
+	}
+	var st setting
+
+	err = sql.db.Find("setting", &st, "where key = 'ThreeRate'")
+	if err != nil {
+		sta := setting{Key: "ThreeRate", Value: "800"}
+		_ = sql.db.Insert("setting", &sta)
+	}
+	sts.ThreeRate, _ = strconv.Atoi(st.Value)
+
+	err = sql.db.Find("setting", &st, "where key = 'FourRate'")
+	if err != nil {
+		sta := setting{Key: "FourRate", Value: "890"}
+		_ = sql.db.Insert("setting", &sta)
+	}
+	sts.FourRate, _ = strconv.Atoi(st.Value)
+
+	err = sql.db.Find("setting", &st, "where key = 'Four2Rate'")
+	if err != nil {
+		sta := setting{Key: "Four2Rate", Value: "980"}
+		_ = sql.db.Insert("setting", &sta)
+	}
+	sts.Four2Rate, _ = strconv.Atoi(st.Value)
+
+	err = sql.db.Find("setting", &st, "where key = 'FiveRate'")
+	if err != nil {
+		sta := setting{Key: "FiveRate", Value: "990"}
+		_ = sql.db.Insert("setting", &sta)
+	}
+	sts.FiveRate, _ = strconv.Atoi(st.Value)
+
+	err = sql.db.Find("setting", &st, "where key = 'ThreeReword'")
+	if err != nil {
+		sta := setting{Key: "ThreeReword", Value: "-200"}
+		_ = sql.db.Insert("setting", &sta)
+	}
+	sts.ThreeReword, _ = strconv.Atoi(st.Value)
+
+	err = sql.db.Find("setting", &st, "where key = 'FourReword'")
+	if err != nil {
+		sta := setting{Key: "FourReword", Value: "350"}
+		_ = sql.db.Insert("setting", &sta)
+	}
+	sts.FourReword, _ = strconv.Atoi(st.Value)
+
+	err = sql.db.Find("setting", &st, "where key = 'Four2Reword'")
+	if err != nil {
+		sta := setting{Key: "Four2Reword", Value: "350"}
+		_ = sql.db.Insert("setting", &sta)
+	}
+	sts.Four2Reword, _ = strconv.Atoi(st.Value)
+
+	err = sql.db.Find("setting", &st, "where key = 'FiveReword'")
+	if err != nil {
+		sta := setting{Key: "FiveReword", Value: "350"}
+		_ = sql.db.Insert("setting", &sta)
+	}
+	sts.FiveReword, _ = strconv.Atoi(st.Value)
+
+	err = sql.db.Find("setting", &st, "where key = 'Five2Reword'")
+	if err != nil {
+		sta := setting{Key: "Five2Reword", Value: "7000"}
+		_ = sql.db.Insert("setting", &sta)
+	}
+	sts.Five2Reword, _ = strconv.Atoi(st.Value)
+
+	return
 }
