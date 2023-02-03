@@ -7,7 +7,6 @@ package atri
 
 import (
 	"encoding/base64"
-	"github.com/FloatTech/floatbox/process"
 	"math/rand"
 	"time"
 
@@ -141,7 +140,6 @@ func init() { // 插件主体
 		Handle(func(ctx *zero.Ctx) {
 			now := time.Now().Hour()
 			if now > 11 && now < 15 { // 中午
-				process.SleepAbout1sTo2s()
 				var nickname = zero.BotConfig.NickName[0]
 				ctx.SendChain(message.Reply(ctx.Event.MessageID), randText(
 					"午安w",
@@ -154,7 +152,6 @@ func init() { // 插件主体
 	engine.OnFullMatchGroup([]string{"晚安", "oyasuminasai", "おやすみなさい", "晚好", "晚上好"}).SetBlock(true).
 		Handle(func(ctx *zero.Ctx) {
 			now := time.Now().Hour()
-			process.SleepAbout1sTo2s()
 			var nickname = zero.BotConfig.NickName[0]
 			switch {
 			case now < 6: // 凌晨
