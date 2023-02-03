@@ -450,10 +450,24 @@ func init() { // 插件主体
 
 		})
 
-	engine.OnRegex(`^(\d+)d(\d+)$`, zero.SuperUserPermission, zero.OnlyToMe, zero.OnlyGroup).SetBlock(true).
+	engine.OnRegex(`^(\d+)d(\d+)$`, zero.AdminPermission, zero.OnlyToMe, zero.OnlyGroup).SetBlock(true).
 		Handle(func(ctx *zero.Ctx) {
-			//num, _ := strconv.Atoi(ctx.State["regex_matched"].([]string)[1])
-			//face, _ := strconv.Atoi(ctx.State["regex_matched"].([]string)[1])
+			num, _ := strconv.Atoi(ctx.State["regex_matched"].([]string)[1])
+			faceRange, _ := strconv.Atoi(ctx.State["regex_matched"].([]string)[2])
+			var str = ""
+			if num <= 1 {
+				ctx.SendChain(message.Text("个数不合法!"))
+				return
+			}
+			if faceRange <= 1 {
+				ctx.SendChain(message.Text("面数不合法!"))
+				return
+			}
+			for i := 0; i < num; i++ {
+				face := rand.Intn(faceRange) + 1
+				str += fmt.Sprintf("%d. %d\n", i+1, face)
+			}
+			ctx.Send(message.ReplyWithMessage(ctx.Event.MessageID, message.Text(str)))
 		})
 }
 
