@@ -71,7 +71,6 @@ func init() { // 插件主体
 
 	engine.OnFullMatchGroup([]string{"寄", "寄了"}).SetBlock(true).
 		Handle(func(ctx *zero.Ctx) {
-			process.SleepAbout1sTo2s()
 			ctx.SendChain(randText(
 				"寄",
 				"你寄了",
@@ -83,7 +82,6 @@ func init() { // 插件主体
 		})
 	engine.OnFullMatch("萝卜子").SetBlock(true).
 		Handle(func(ctx *zero.Ctx) {
-			process.SleepAbout1sTo2s()
 			var nickname = zero.BotConfig.NickName[0]
 			switch rand.Intn(2) {
 			case 0:
