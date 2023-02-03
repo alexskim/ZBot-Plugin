@@ -7,6 +7,7 @@ package atri
 
 import (
 	"encoding/base64"
+	"github.com/FloatTech/floatbox/process"
 	"math/rand"
 	"time"
 
@@ -65,8 +66,10 @@ func init() { // 插件主体
 			ctx.SendChain(message.Text("Zzz……Zzz……"))
 		},
 	})
+	engine.UsePreHandler(isAtriSleeping)
+	var dgtr datagetter = engine.GetLazyData
 
-	engine.OnFullMatchGroup([]string{"寄", "寄了"}, isAtriSleeping).SetBlock(true).
+	engine.OnFullMatchGroup([]string{"寄", "寄了"}).SetBlock(true).
 		Handle(func(ctx *zero.Ctx) {
 			process.SleepAbout1sTo2s()
 			ctx.SendChain(randText(
@@ -78,7 +81,7 @@ func init() { // 插件主体
 				"寄了",
 			))
 		})
-	engine.OnFullMatch("萝卜子", isAtriSleeping).SetBlock(true).
+	engine.OnFullMatch("萝卜子").SetBlock(true).
 		Handle(func(ctx *zero.Ctx) {
 			process.SleepAbout1sTo2s()
 			var nickname = zero.BotConfig.NickName[0]
