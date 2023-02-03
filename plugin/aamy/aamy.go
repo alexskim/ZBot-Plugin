@@ -449,6 +449,12 @@ func init() { // 插件主体
 			}
 
 		})
+
+	engine.OnRegex(`^(\d+)d(\d+)$`, zero.SuperUserPermission, zero.OnlyToMe, zero.OnlyGroup).SetBlock(true).
+		Handle(func(ctx *zero.Ctx) {
+			//num, _ := strconv.Atoi(ctx.State["regex_matched"].([]string)[1])
+			//face, _ := strconv.Atoi(ctx.State["regex_matched"].([]string)[1])
+		})
 }
 
 // DoubleAverage 二倍均值算法
