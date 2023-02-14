@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"github.com/FloatTech/AnimeAPI/wallet"
 	fcext "github.com/FloatTech/floatbox/ctxext"
-	"github.com/FloatTech/floatbox/img/writer"
 	"github.com/FloatTech/floatbox/process"
+	"github.com/FloatTech/imgfactory"
 	sql "github.com/FloatTech/sqlite"
 	ctrl "github.com/FloatTech/zbpctrl"
 	"github.com/FloatTech/zbputils/control"
@@ -156,7 +156,11 @@ func init() {
 				ctx.SendChain(message.Text("ERROR: ", err))
 				return
 			}
-			b, cl := writer.ToBytes(img)
+			b, err := imgfactory.ToBytes(img)
+			if err != nil {
+				ctx.SendChain(message.Text("ERROR: ", err))
+				return
+			}
 			if mode {
 				ctx.Send(message.ReplyWithMessage(ctx.Event.MessageID,
 					message.Text("恭喜你抽到了: \n", str), message.ImageBytes(b)))
@@ -164,7 +168,6 @@ func init() {
 				ctx.Send(message.ReplyWithMessage(ctx.Event.MessageID,
 					message.Text("十连成功~"), message.ImageBytes(b)))
 			}
-			cl()
 		})
 
 	engine.OnRegex(`^十连\s*(\d+)`, fcext.DoOnceOnSuccess(
