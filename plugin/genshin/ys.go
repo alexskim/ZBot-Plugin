@@ -226,7 +226,11 @@ func init() {
 				ctx.SendChain(message.Text("ERROR: ", err))
 				return
 			}
-			b, cl := writer.ToBytes(img)
+			b, err := imgfactory.ToBytes(img)
+			if err != nil {
+				ctx.SendChain(message.Text("ERROR: ", err))
+				return
+			}
 			rst := ""
 			if !store.is5starsmode() {
 				realReword := reword * invest / 1000
@@ -260,7 +264,6 @@ func init() {
 				ctx.Send(message.ReplyWithMessage(ctx.Event.MessageID, message.Text("十连成功~"), message.ImageBytes(b), message.Text("\n", rst)))
 			}
 
-			cl()
 		})
 
 	engine.OnRegex(`^五十连\s*(\d+)`, fcext.DoOnceOnSuccess(
@@ -360,11 +363,31 @@ func init() {
 				str5 = "什么都没有~"
 			}
 
-			b1, cl1 := writer.ToBytes(img1)
-			b2, cl2 := writer.ToBytes(img2)
-			b3, cl3 := writer.ToBytes(img3)
-			b4, cl4 := writer.ToBytes(img4)
-			b5, cl5 := writer.ToBytes(img5)
+			b1, err := imgfactory.ToBytes(img1)
+			if err != nil {
+				ctx.SendChain(message.Text("ERROR: ", err))
+				return
+			}
+			b2, err := imgfactory.ToBytes(img2)
+			if err != nil {
+				ctx.SendChain(message.Text("ERROR: ", err))
+				return
+			}
+			b3, err := imgfactory.ToBytes(img3)
+			if err != nil {
+				ctx.SendChain(message.Text("ERROR: ", err))
+				return
+			}
+			b4, err := imgfactory.ToBytes(img4)
+			if err != nil {
+				ctx.SendChain(message.Text("ERROR: ", err))
+				return
+			}
+			b5, err := imgfactory.ToBytes(img5)
+			if err != nil {
+				ctx.SendChain(message.Text("ERROR: ", err))
+				return
+			}
 			rst := ""
 			if !store.is5starsmode() {
 				realReword1 := reword1 * invest / 1000
@@ -405,11 +428,6 @@ func init() {
 				message.Text("\n", str5), message.ImageBytes(b5),
 				message.Text("\n", rst)))
 
-			cl1()
-			cl2()
-			cl3()
-			cl4()
-			cl5()
 		})
 }
 
