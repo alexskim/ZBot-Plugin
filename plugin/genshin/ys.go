@@ -170,7 +170,7 @@ func init() {
 			}
 		})
 
-	engine.OnRegex(`^十连\s*(\d+)`, fcext.DoOnceOnSuccess(
+	engine.OnRegex(`^十连\s*(\d+)`, zero.SuperUserPermission, fcext.DoOnceOnSuccess(
 		func(ctx *zero.Ctx) bool {
 			zipfile := engine.DataFolder() + "Genshin.zip"
 			_, err := engine.GetLazyData("Genshin.zip", false)
@@ -266,7 +266,7 @@ func init() {
 
 		})
 
-	engine.OnRegex(`^五十连\s*(\d+)`, fcext.DoOnceOnSuccess(
+	engine.OnRegex(`^五十连\s*(\d+)`, zero.SuperUserPermission, fcext.DoOnceOnSuccess(
 		func(ctx *zero.Ctx) bool {
 			zipfile := engine.DataFolder() + "Genshin.zip"
 			_, err := engine.GetLazyData("Genshin.zip", false)

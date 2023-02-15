@@ -64,21 +64,21 @@ func timeDuration(time time.Duration) (hour, minute, second int64) {
 	return hour, minute, second
 }
 
-// 只统计6点到12点的早安
+// 只统计6点到9点的早安
 func isMorning(ctx *zero.Ctx) bool {
 	now := time.Now().Hour()
-	return now >= 6 && now <= 12
+	return now >= 6 && now <= 9
 }
 
-// 只统计21点到凌晨3点的晚安
+// 只统计21点到凌晨0点的晚安
 func isEvening(ctx *zero.Ctx) bool {
 	now := time.Now().Hour()
-	return now >= 21 || now <= 3
+	return now >= 21 || now <= 0
 }
 
 func morning(position int, ctx *zero.Ctx) {
 	if position == 1 {
-		r := rand.Intn(70) + 10
+		r := rand.Intn(20) + 1
 		ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text(fmt.Sprintf("你是今天第一个起床的,送你 %d 块糖果", r)))
 		err := wallet.InsertWalletOf(ctx.Event.UserID, r)
 		if err != nil {
@@ -87,7 +87,7 @@ func morning(position int, ctx *zero.Ctx) {
 		}
 	}
 	if position == 2 {
-		r := rand.Intn(50) + 10
+		r := rand.Intn(14) + 1
 		ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text(fmt.Sprintf("你是今天第二个起床的,送你 %d 块糖果", r)))
 		err := wallet.InsertWalletOf(ctx.Event.UserID, r)
 		if err != nil {
@@ -96,7 +96,7 @@ func morning(position int, ctx *zero.Ctx) {
 		}
 	}
 	if position == 3 {
-		r := rand.Intn(30) + 10
+		r := rand.Intn(7) + 1
 		ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text(fmt.Sprintf("你是今天第三个起床的,送你 %d 块糖果", r)))
 		err := wallet.InsertWalletOf(ctx.Event.UserID, r)
 		if err != nil {
@@ -105,7 +105,7 @@ func morning(position int, ctx *zero.Ctx) {
 		}
 	}
 	if position > 3 {
-		r := rand.Intn(10) + 10
+		r := rand.Intn(5) + 1
 		ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text(fmt.Sprintf("送你 %d 块糖果", r)))
 		err := wallet.InsertWalletOf(ctx.Event.UserID, r)
 		if err != nil {
@@ -117,7 +117,7 @@ func morning(position int, ctx *zero.Ctx) {
 
 func evening(position int, ctx *zero.Ctx) {
 	if position == 1 {
-		r := rand.Intn(70) + 10
+		r := rand.Intn(10) + 1
 		ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text(fmt.Sprintf("你是今天第一个睡觉的,送你 %d 块糖果", r)))
 		err := wallet.InsertWalletOf(ctx.Event.UserID, r)
 		if err != nil {
@@ -126,7 +126,7 @@ func evening(position int, ctx *zero.Ctx) {
 		}
 	}
 	if position == 2 {
-		r := rand.Intn(50) + 10
+		r := rand.Intn(7) + 1
 		ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text(fmt.Sprintf("你是今天第二个睡觉的,送你 %d 块糖果", r)))
 		err := wallet.InsertWalletOf(ctx.Event.UserID, r)
 		if err != nil {
@@ -135,7 +135,7 @@ func evening(position int, ctx *zero.Ctx) {
 		}
 	}
 	if position == 3 {
-		r := rand.Intn(30) + 10
+		r := rand.Intn(5) + 1
 		ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text(fmt.Sprintf("你是今天第三个睡觉的,送你 %d 块糖果", r)))
 		err := wallet.InsertWalletOf(ctx.Event.UserID, r)
 		if err != nil {
@@ -144,7 +144,7 @@ func evening(position int, ctx *zero.Ctx) {
 		}
 	}
 	if position > 3 {
-		r := rand.Intn(10) + 10
+		r := rand.Intn(1) + 1
 		ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text(fmt.Sprintf("送你 %d 块糖果", r)))
 		err := wallet.InsertWalletOf(ctx.Event.UserID, r)
 		if err != nil {

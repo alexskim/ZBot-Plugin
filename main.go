@@ -77,6 +77,7 @@ import (
 	_ "github.com/FloatTech/ZeroBot-Plugin/plugin/chrev"        // 英文字符翻转
 	_ "github.com/FloatTech/ZeroBot-Plugin/plugin/coser"        // 三次元小姐姐
 	_ "github.com/FloatTech/ZeroBot-Plugin/plugin/cpstory"      // cp短打
+	_ "github.com/FloatTech/ZeroBot-Plugin/plugin/cybercat"     // 云养猫
 	_ "github.com/FloatTech/ZeroBot-Plugin/plugin/danbooru"     // DeepDanbooru二次元图标签识别
 	_ "github.com/FloatTech/ZeroBot-Plugin/plugin/diana"        // 嘉心糖发病
 	_ "github.com/FloatTech/ZeroBot-Plugin/plugin/dress"        // 女装
@@ -88,6 +89,7 @@ import (
 	_ "github.com/FloatTech/ZeroBot-Plugin/plugin/funny"        // 笑话
 	_ "github.com/FloatTech/ZeroBot-Plugin/plugin/genshin"      // 原神抽卡
 	_ "github.com/FloatTech/ZeroBot-Plugin/plugin/gif"          // 制图
+	_ "github.com/FloatTech/ZeroBot-Plugin/plugin/kokomi"       // kokomi原神面板
 	//_ "github.com/FloatTech/ZeroBot-Plugin/plugin/github"        // 搜索GitHub仓库
 	_ "github.com/FloatTech/ZeroBot-Plugin/plugin/guessmusic"   // 猜歌
 	_ "github.com/FloatTech/ZeroBot-Plugin/plugin/heisi"        // 黑丝
@@ -142,7 +144,6 @@ import (
 	_ "github.com/FloatTech/ZeroBot-Plugin/plugin/wordle"        // 猜单词
 	_ "github.com/FloatTech/ZeroBot-Plugin/plugin/ygo"           // 游戏王相关插件
 	_ "github.com/FloatTech/ZeroBot-Plugin/plugin/ymgal"         // 月幕galgame
-
 	// _ "github.com/FloatTech/ZeroBot-Plugin/plugin/thesaurus"     // 词典匹配回复
 	// _ "github.com/FloatTech/ZeroBot-Plugin/plugin/wtf"           // 鬼东西
 
@@ -207,7 +208,7 @@ func init() {
 	// 直接写死 AccessToken 时，请更改下面第二个参数
 	token := flag.String("t", "", "Set AccessToken of WSClient.")
 	// 直接写死 URL 时，请更改下面第二个参数
-	url := flag.String("u", "ws://127.0.0.1:12310", "Set Url of WSClient.")
+	url := flag.String("u", "ws://127.0.0.1:10101", "Set Url of WSClient.")
 	// 默认昵称
 	adana := flag.String("n", "糖糖", "Set default nickname.")
 	prefix := flag.String("p", "/", "Set command prefix.")
