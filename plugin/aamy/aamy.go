@@ -289,7 +289,7 @@ func init() { // 插件主体
 		Handle(func(ctx *zero.Ctx) {
 			uid := ctx.Event.UserID
 			money := wallet.GetWalletOf(uid)
-			if money >= 50 {
+			if money >= 0 {
 				ctx.Send(message.ReplyWithMessage(ctx.Event.MessageID, message.Text("你不需要恰低保!")))
 				return
 			}

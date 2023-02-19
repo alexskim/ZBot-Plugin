@@ -29,8 +29,8 @@ func init() {
 			return
 		}
 		lastTime := time.Unix(userInfo.ArenaTime, 0)
-		if time.Since(lastTime).Hours() < 24 {
-			ctx.SendChain(message.Reply(id), message.Text(userInfo.Name, "已经PK过了,让它休息休息吧"))
+		if time.Since(lastTime).Hours() < 3 {
+			ctx.SendChain(message.Reply(id), message.Text(userInfo.Name, "三小时内已经PK过了,让它休息休息吧"))
 			return
 		}
 		duelStr := ctx.State["regex_matched"].([]string)[3]
@@ -44,7 +44,7 @@ func init() {
 			return
 		}
 		lastTime = time.Unix(duelInfo.ArenaTime, 0)
-		if time.Since(lastTime).Hours() < 24 {
+		if time.Since(lastTime).Hours() < 3 {
 			ctx.SendChain(message.Reply(id), message.Text(ctx.CardOrNickName(duelInfo.User), "的", duelInfo.Name, "已经PK过了,让它休息休息吧"))
 			return
 		}
