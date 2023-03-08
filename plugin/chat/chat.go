@@ -54,6 +54,12 @@ func init() { // 插件主体
 					"戳"+nickname+"干嘛qwq",
 					"别戳了别戳了再戳就坏了555",
 					"呜......戳坏了",
+					"不可以，不可以戳"+nickname+"那里!",
+					"连"+nickname+"都要戳的人，最讨厌了！",
+					"再戳"+nickname+"......，"+nickname+"...就生气了!",
+					"你们都戳了"+nickname+"多少下了！哼＞︿＜",
+					nickname+"的脸要被戳出坑了(生气)...",
+					"可怜的"+nickname+"每天都会被hentai群友戳傻...",
 				))
 			case poke.Load(ctx.Event.GroupID).Acquire():
 				// 5分钟共8块命令牌 一次消耗1块命令牌
@@ -63,11 +69,14 @@ func init() { // 插件主体
 				// novelai 群偷的语料
 				ctx.SendChain(randText(
 					"喂(#`O′) 戳"+nickname+"干嘛！",
+					nickname+"每天都要被好多hentai戳，呜呜呜~",
 					"你再戳！",
 					"戳坏了，你赔！",
 					"唔姆姆，不许再戳咱了！",
 					"连个可爱美少女都要戳的肥宅真恶心啊。",
 					"欸很烦欸！你戳锤子呢",
+					"来自"+nickname+"对hentai的反击！",
+					"大变态，吃"+nickname+"一拳！",
 				))
 			default:
 				// 频繁触发，不回复

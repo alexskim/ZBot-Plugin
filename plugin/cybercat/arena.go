@@ -5,11 +5,14 @@ import (
 	"math"
 	"math/rand"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/FloatTech/AnimeAPI/wallet"
 	zbmath "github.com/FloatTech/floatbox/math"
 	"github.com/FloatTech/zbputils/ctxext"
+	"github.com/FloatTech/zbputils/img/text"
+	"github.com/fumiama/jieba/util/helper"
 	zero "github.com/wdvxdr1123/ZeroBot"
 	"github.com/wdvxdr1123/ZeroBot/message"
 )
@@ -29,8 +32,8 @@ func init() {
 			return
 		}
 		lastTime := time.Unix(userInfo.ArenaTime, 0)
-		if time.Since(lastTime).Hours() < 3 {
-			ctx.SendChain(message.Reply(id), message.Text(userInfo.Name, "三小时内已经PK过了,让它休息休息吧"))
+		if time.Since(lastTime).Hours() < 24 {
+			ctx.SendChain(message.Reply(id), message.Text(userInfo.Name, "已经PK过了,让它休息休息吧"))
 			return
 		}
 		duelStr := ctx.State["regex_matched"].([]string)[3]
@@ -44,13 +47,13 @@ func init() {
 			return
 		}
 		lastTime = time.Unix(duelInfo.ArenaTime, 0)
-		if time.Since(lastTime).Hours() < 3 {
+		if time.Since(lastTime).Hours() < 24 {
 			ctx.SendChain(message.Reply(id), message.Text(ctx.CardOrNickName(duelInfo.User), "的", duelInfo.Name, "已经PK过了,让它休息休息吧"))
 			return
 		}
 		/***************************************************************/
-		ctx.SendChain(message.Text("等待对方回应。(发送“取消PK”撤回PK)\n请对方发送“去吧猫猫”接受PK或“拒绝”结束PK"))
-		recv, cancel := zero.NewFutureEvent("message", 999, false, zero.OnlyGroup, zero.RegexRule("^(去吧猫猫|取消PK|拒绝)$"), zero.CheckGroup(ctx.Event.GroupID), zero.CheckUser(zbmath.Str2Int64(duelStr))).Repeat()
+		ctx.SendChain(message.Text("等待对方回应。(发送“取消”撤回PK)\n请对方发送“去吧猫猫”接受PK或“拒绝”结束PK"))
+		recv, cancel := zero.NewFutureEvent("message", 999, false, zero.OnlyGroup, zero.RegexRule("^(去吧猫猫|取消|拒绝)$"), zero.CheckGroup(ctx.Event.GroupID), zero.CheckUser(zbmath.Str2Int64(duelStr), userInfo.User)).Repeat()
 		defer cancel()
 		approve := false
 		over := time.NewTimer(60 * time.Second)
@@ -67,7 +70,7 @@ func init() {
 						ctx.SendChain(message.Reply(id), message.Text("对方拒绝了你的PK"))
 						return
 					}
-				case "取消PK":
+				case "取消":
 					if c.Event.UserID == userInfo.User {
 						over.Stop()
 						ctx.SendChain(message.Reply(id), message.Text("你取消了PK"))
@@ -175,20 +178,22 @@ func init() {
 		if len(infoList) == 0 {
 			ctx.SendChain(message.Text("没有人养猫哦"))
 		}
-		messageText := make(message.Message, 0, 10)
+		messageText := make([]string, 0, 10)
 		for i, info := range infoList {
 			if i > 9 {
 				break
-			} else if i != 0 {
-				messageText = append(messageText, message.Text("\n"))
 			}
-			messageText = append(messageText, message.Text(
-				i+1, ".", info.Name, "(", info.Type, ")\n",
-				"体重：", strconv.FormatFloat(info.Weight, 'f', 2, 64), "kg\n",
-				"主人:", ctx.CardOrNickName(info.User),
-			))
+			messageText = append(messageText, []string{
+				strconv.Itoa(i+1) + "." + info.Name + "(" + info.Type + ")",
+				"体重：" + strconv.FormatFloat(info.Weight, 'f', 2, 64) + "斤",
+				"主人:" + ctx.CardOrNickName(info.User), "--------------------",
+			}...)
 		}
-		ctx.SendChain(messageText...)
+		textPic, err := text.RenderToBase64(strings.Join(messageText, "\n"), text.BoldFontFile, 1080, 50)
+		if err != nil {
+			return
+		}
+		ctx.SendChain(message.Image("base64://" + helper.BytesToString(textPic)))
 	})
 }
 
