@@ -10,3 +10,4 @@ ZeroBot-Plugin*
 plugin/kokomi/data
 plugin/kokomi/data/
 plugin/kokomi/data/*
+*.syso
