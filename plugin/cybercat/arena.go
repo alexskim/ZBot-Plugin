@@ -32,7 +32,7 @@ func init() {
 			return
 		}
 		lastTime := time.Unix(userInfo.ArenaTime, 0)
-		if time.Since(lastTime).Hours() < 24 {
+		if time.Since(lastTime).Hours() < 3 {
 			ctx.SendChain(message.Reply(id), message.Text(userInfo.Name, "已经PK过了,让它休息休息吧"))
 			return
 		}
@@ -47,7 +47,7 @@ func init() {
 			return
 		}
 		lastTime = time.Unix(duelInfo.ArenaTime, 0)
-		if time.Since(lastTime).Hours() < 24 {
+		if time.Since(lastTime).Hours() < 3 {
 			ctx.SendChain(message.Reply(id), message.Text(ctx.CardOrNickName(duelInfo.User), "的", duelInfo.Name, "已经PK过了,让它休息休息吧"))
 			return
 		}
