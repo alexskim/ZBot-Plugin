@@ -20,32 +20,6 @@ func init() { // 插件主体
 		Help:             "神秘插件",
 	})
 
-	//engine.OnRegex(`\[CQ:reply,id=(\-?[0-9]+)\].*撤回.*`).SetBlock(true).
-	//	Handle(func(ctx *zero.Ctx) {
-	//		//[CQ:reply,id=543569241]撤回
-	//		messageID := ctx.State["regex_matched"].([]string)[0]
-	//		messageID = strings.Split(messageID, "=")[1]
-	//		messageID = strings.Split(messageID, "]")[0]
-	//
-	//		ctx.CallAction("delete_msg", zero.Params{
-	//			"message_id": messageID,
-	//		})
-	//	})
-
-	//engine.OnFullMatch("我的权限", zero.OnlyToMe).SetBlock(true).
-	//	Handle(func(ctx *zero.Ctx) {
-	//		if zero.SuperUserPermission(ctx) {
-	//			ctx.Send("超管")
-	//		}
-	//		if ctx.Event.Sender.Role == "owner" {
-	//			ctx.Send("群主")
-	//		}
-	//		if ctx.Event.Sender.Role == "admin" {
-	//			ctx.Send("群管")
-	//		}
-	//		ctx.Send("群员")
-	//	})
-
 	zero.On("notice/group_ban/ban", zero.OnlyToMe, zero.OnlyGroup).SetBlock(false).
 		Handle(func(ctx *zero.Ctx) {
 			oid := ctx.Event.OperatorID
@@ -485,7 +459,7 @@ func DoubleAverage(count, amount int) int {
 	//二倍均值基础上再加上最小金额 防止出现金额为0
 	avg2 := 2*avg + min
 	//随机红包金额序列元素，把二倍均值作为随机的最大数
-	rand.Seed(time.Now().UnixNano())
+	//rand.Seed(time.Now().UnixNano())
 	x := rand.Intn(avg2) + min
 	return x
 }
