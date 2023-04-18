@@ -82,7 +82,7 @@ var (
 	))
 	getdb = fcext.DoOnceOnSuccess(func(ctx *zero.Ctx) bool {
 		民政局.db.DBPath = engine.DataFolder() + "结婚登记表.db"
-		err := 民政局.db.Open(time.Hour * 24)
+		err := 民政局.db.Open(time.Hour)
 		if err == nil {
 			// 创建群配置表
 			err = 民政局.db.Create("updateinfo", &updateinfo{})
@@ -302,7 +302,7 @@ func init() {
 func (sql *婚姻登记) 查看设置(gid int64) (dbinfo updateinfo, err error) {
 	sql.Lock()
 	defer sql.Unlock()
-	// 创建群表哥
+	// 创建群表格
 	err = sql.db.Create("updateinfo", &updateinfo{})
 	if err != nil {
 		return
@@ -350,7 +350,7 @@ func (sql *婚姻登记) 查户口(gid, uid int64) (info userinfo, err error) {
 	sql.Lock()
 	defer sql.Unlock()
 	gidstr := "group" + strconv.FormatInt(gid, 10)
-	// 创建群表哥
+	// 创建群表格
 	err = sql.db.Create(gidstr, &userinfo{})
 	if err != nil {
 		return
