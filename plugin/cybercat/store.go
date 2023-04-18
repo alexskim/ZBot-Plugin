@@ -15,7 +15,13 @@ import (
 )
 
 func init() {
-	engine.OnRegex(`^买(.*猫)$`, zero.OnlyGroup, getdb).SetBlock(true).Limit(ctxext.LimitByUser).Handle(func(ctx *zero.Ctx) {
+	engine.OnRegex(`^买(.*猫)$`, zero.OnlyGroup, func(ctx *zero.Ctx) bool {
+		if now := time.Now().Hour(); now >= 6 && now <= 20 {
+			return true
+		}
+		ctx.SendChain(message.Text("猫店已经关门了,早上六点后再来吧"))
+		return false
+	}, getdb).SetBlock(true).Limit(ctxext.LimitByUser).Handle(func(ctx *zero.Ctx) {
 		id := ctx.Event.MessageID
 		gidStr := "group" + strconv.FormatInt(ctx.Event.GroupID, 10)
 		uidStr := strconv.FormatInt(ctx.Event.UserID, 10)
@@ -56,9 +62,12 @@ func init() {
 			return
 		}
 		/*******************************************************/
-		userInfo.Work++
-		userInfo.LastTime = time.Now().Unix()
-		if catdata.insert(gidStr, userInfo) != nil {
+		if typeOfcat == "猫" {
+			userInfo.LastTime = time.Now().Unix()
+		} else {
+			userInfo.Work++
+		}
+		if err = catdata.insert(gidStr, userInfo); err != nil {
 			ctx.SendChain(message.Text("[ERROR]:", err))
 			return
 		}
@@ -181,18 +190,24 @@ func init() {
 		userInfo.LastTime = 0
 		userInfo.Work = 0
 		userInfo.Picurl = picurl
-		if wallet.InsertWalletOf(ctx.Event.UserID, -money) != nil {
+		if err = wallet.InsertWalletOf(ctx.Event.UserID, -money); err != nil {
 			ctx.SendChain(message.Text("[ERROR]:", err))
 			return
 		}
-		if catdata.insert(gidStr, userInfo) != nil {
+		if err = catdata.insert(gidStr, userInfo); err != nil {
 			ctx.SendChain(message.Text("[ERROR]:", err))
 			return
 		}
 		messageText = append(messageText, message.Text("恭喜你买了一只喵喵"))
 		ctx.Send(messageText)
 	})
-	engine.OnRegex(`^买((\d+)袋)?猫粮$`, zero.OnlyGroup, getdb).SetBlock(true).Limit(ctxext.LimitByUser).Handle(func(ctx *zero.Ctx) {
+	engine.OnRegex(`^买((\d+)袋)?猫粮$`, zero.OnlyGroup, func(ctx *zero.Ctx) bool {
+		if now := time.Now().Hour(); now >= 6 && now <= 20 {
+			return true
+		}
+		ctx.SendChain(message.Text("猫店已经关门了,早上六点后再来吧"))
+		return false
+	}, getdb).SetBlock(true).Limit(ctxext.LimitByUser).Handle(func(ctx *zero.Ctx) {
 		id := ctx.Event.MessageID
 		gidStr := "group" + strconv.FormatInt(ctx.Event.GroupID, 10)
 		uidStr := strconv.FormatInt(ctx.Event.UserID, 10)
@@ -238,11 +253,11 @@ func init() {
 			ctx.SendChain(message.Text("[ERROR]:", err))
 			return
 		}
-		if catdata.insert(gidStr, userInfo) != nil {
+		if err = catdata.insert(gidStr, userInfo); err != nil {
 			ctx.SendChain(message.Text("[ERROR]:", err))
 			return
 		}
-		messageText = append(messageText, message.Text("你购买了", mun, "袋,共计", foodmoney, "\n当前猫粮有", userInfo.Food, "斤"))
+		messageText = append(messageText, message.Text("你购买了", mun, "袋,共计", foodmoney, "\n当前猫粮有", strconv.FormatFloat(userInfo.Food, 'f', 2, 64), "斤"))
 		ctx.Send(messageText)
 	})
 	engine.OnPrefixGroup([]string{"喵喵改名叫", "猫猫改名叫"}, zero.OnlyGroup, getdb).SetBlock(true).Limit(ctxext.LimitByUser).Handle(func(ctx *zero.Ctx) {
@@ -259,12 +274,16 @@ func init() {
 			return
 		}
 		newName := strings.TrimSpace(ctx.State["args"].(string))
-		if newName != "" {
-			userInfo.Name = newName
-		} else {
+		switch {
+		case newName == "":
 			userInfo.Name = userInfo.Type
+		case len(newName) > 6*3:
+			ctx.SendChain(message.Reply(id), message.Text("请输入正确的名字"))
+			return
+		default:
+			userInfo.Name = newName
 		}
-		if catdata.insert(gidStr, userInfo) != nil {
+		if err = catdata.insert(gidStr, userInfo); err != nil {
 			ctx.SendChain(message.Text("[ERROR]:", err))
 			return
 		}
