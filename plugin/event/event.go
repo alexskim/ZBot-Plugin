@@ -52,13 +52,15 @@ func init() {
 					return
 				}
 				ctx.SendPrivateForwardMessage(su,
-					message.Message{message.CustomNode(username, userid,
-						"在"+now+"收到来自"+
-							"\n用户:["+username+"]("+strconv.FormatInt(userid, 10)+")的群聊邀请"+
-							"\n群聊:["+groupname+"]("+strconv.FormatInt(groupid, 10)+")"+
-							"\n请在下方复制flag并在前面加上:"+
-							"\n同意/拒绝邀请，来决定同意还是拒绝"),
-						message.CustomNode(username, userid, es)})
+					message.Message{
+						message.CustomNode(username, userid,
+							"在"+now+"收到来自"+
+								"\n用户:["+username+"]("+strconv.FormatInt(userid, 10)+")的群聊邀请"+
+								"\n群聊:["+groupname+"]("+strconv.FormatInt(groupid, 10)+")",
+						),
+						message.CustomNode(username, userid, "同意邀请"+es),
+						message.CustomNode(username, userid, "拒绝邀请"+es),
+					})
 			}
 		})
 	engine.On("request/friend").SetBlock(false).
@@ -90,13 +92,14 @@ func init() {
 					return
 				}
 				ctx.SendPrivateForwardMessage(su,
-					message.Message{message.CustomNode(username, userid,
-						"在"+now+"收到来自"+
-							"\n用户:["+username+"]("+strconv.FormatInt(userid, 10)+")"+
-							"\n的好友请求:"+comment+
-							"\n请在下方复制flag并在前面加上:"+
-							"\n同意/拒绝申请，来决定同意还是拒绝"),
-						message.CustomNode(username, userid, es)})
+					message.Message{
+						message.CustomNode(username, userid,
+							"在"+now+"收到来自"+
+								"\n用户:["+username+"]("+strconv.FormatInt(userid, 10)+")"+
+								"\n的好友请求:"+comment),
+						message.CustomNode(username, userid, "同意申请"+es),
+						message.CustomNode(username, userid, "拒绝申请"+es),
+					})
 			}
 		})
 	engine.OnRegex(`^(同意|拒绝)(申请|邀请)\s*([一-踀]{4})\s*(.*)$`, zero.SuperUserPermission, zero.OnlyPrivate).SetBlock(true).
